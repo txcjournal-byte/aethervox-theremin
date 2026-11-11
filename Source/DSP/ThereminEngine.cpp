@@ -5,22 +5,29 @@ namespace av
 void ThereminEngine::prepare (double sampleRate)
 {
     fs = sampleRate;
-    osc.prepare (fs);
+    for (size_t v = 0; v < voices.size(); ++v)
+    {
+        auto& vc = voices[v];
+        for (auto& o : vc.osc) o.prepare (fs);
+        vc.dc.prepare (fs, 5.0f);
+        const uint32_t s = 11u + (uint32_t) v * 97u;
+        vc.nJitter = SmoothNoise (s);      vc.nJitter.setRate (7.0f,  fs);   // fast hand tremble
+        vc.nWander = SmoothNoise (s + 1);  vc.nWander.setRate (0.7f,  fs);   // vibrato-rate wander
+        vc.nDepth  = SmoothNoise (s + 2);  vc.nDepth .setRate (0.4f,  fs);   // vibrato-depth breathing
+        vc.nDrift  = SmoothNoise (s + 3);  vc.nDrift .setRate (0.08f, fs);   // thermal RF drift
+        vc.nAmp    = SmoothNoise (s + 4);  vc.nAmp   .setRate (5.0f,  fs);   // volume-hand micro-movement
+        vc.vibPhase = 0.137 * (double) v;                                    // voices don't vibrate in lock-step
+    }
     saturator.prepare (fs);
     formant.prepare (fs);
     delay.prepare (fs);
     reverb.prepare (fs);
-    voiceDc.prepare (fs, 5.0f);
-
-    nJitter.setRate (7.0f,  fs);   // fast hand tremble
-    nWander.setRate (0.7f,  fs);   // vibrato-rate wander
-    nDepth .setRate (0.4f,  fs);   // vibrato-depth breathing
-    nDrift .setRate (0.08f, fs);   // thermal RF drift
-    nAmp   .setRate (5.0f,  fs);   // volume-hand micro-movement
 
     morph.reset      (fs, 0.03, params.morph);
     brightness.reset (fs, 0.03, params.brightness);
     outGain.reset    (fs, 0.03, dbToGain (params.outputDb));
+    layerAmt.reset   (fs, 0.05, params.layer);
+    subAmt.reset     (fs, 0.05, params.sub);
     vibOnsetCoef = onePoleCoef (450.0f, fs);   // vibrato blooms in after attack
 
     setParameters (params);
@@ -29,10 +36,15 @@ void ThereminEngine::prepare (double sampleRate)
 
 void ThereminEngine::reset()
 {
-    osc.reset(); saturator.reset(); formant.reset(); delay.reset(); reverb.reset();
-    toneFilter.reset(); voiceDc.reset();
-    env = 0.0f; vibEnv = 0.0f; vibPhase = 0.0;
-    curMidi = targetMidi;
+    for (auto& vc : voices)
+    {
+        for (auto& o : vc.osc) o.reset();
+        vc.dc.reset();
+        vc.env = 0.0f; vc.vibEnv = 0.0f; vc.targetAmp = 0.0f;
+        vc.curMidi = vc.targetMidi;
+    }
+    saturator.reset(); formant.reset(); delay.reset(); reverb.reset(); toneFilter.reset();
+    polyGain = 1.0f;
 }
 
 void ThereminEngine::setParameters (const EngineParams& p)
@@ -44,7 +56,14 @@ void ThereminEngine::setParameters (const EngineParams& p)
     releaseCoef = onePoleCoef (p.releaseMs, fs);
 
     quantizer.setScale (p.scale, p.root);
-    osc.setCoupling (p.coupling);
+    for (auto& vc : voices)
+    {
+        vc.osc[0].setCoupling (p.coupling);
+        vc.osc[1].setCoupling (p.coupling * 0.8f);
+        vc.osc[2].setCoupling (p.coupling * 0.8f);
+        vc.osc[3].setCoupling (p.coupling * 0.5f);
+        vc.targetMidi = quantizer.process (vc.targetMidiRaw, p.quantAmount);
+    }
     saturator.setDrive (p.drive);
     formant.setPreset (p.formant);
     formant.setMix (p.formantMix);
@@ -54,15 +73,16 @@ void ThereminEngine::setParameters (const EngineParams& p)
     morph.setTarget (p.morph);
     brightness.setTarget (p.brightness);
     outGain.setTarget (dbToGain (p.outputDb));
-
-    targetMidi = quantizer.process (targetMidiRaw, params.quantAmount);
+    layerAmt.setTarget (p.layer);
+    subAmt.setTarget (p.sub);
 }
 
-void ThereminEngine::setTarget (float midiNote, float amplitude)
+void ThereminEngine::setVoiceTarget (int v, float midiNote, float amplitude)
 {
-    targetMidiRaw = midiNote;
-    targetMidi    = quantizer.process (midiNote, params.quantAmount);
-    targetAmp     = clampv (amplitude, 0.0f, 1.0f);
+    auto& vc = voices[(size_t) clampv (v, 0, maxVoices - 1)];
+    vc.targetMidiRaw = midiNote;
+    vc.targetMidi    = quantizer.process (midiNote, params.quantAmount);
+    vc.targetAmp     = clampv (amplitude, 0.0f, 1.0f);
 }
 
 // --- band-limited waveforms, phase aligned so their fundamentals match sin(2*pi*p)
@@ -82,52 +102,85 @@ float ThereminEngine::sawtooth (double p, double dt)
 
 void ThereminEngine::renderVoice (float* dest, int n)
 {
-    const float hum        = params.humanize;
-    const float vibDepth   = params.vibDepth;
-    const float vibRate    = params.vibRate;
-    const float tremDepth  = params.tremolo;
-    const float driftAmt   = params.drift;
+    const float hum       = params.humanize;
+    const float vibDepth  = params.vibDepth;
+    const float vibRate   = params.vibRate;
+    const float tremDepth = params.tremolo;
+    const float driftAmt  = params.drift;
+
+    // count sounding voices once per block -> gentle level compensation for chords
+    int sounding = 0;
+    for (const auto& vc : voices) if (! vc.idle()) ++sounding;
+    const float targetPolyGain = 1.0f / std::sqrt ((float) std::max (1, sounding));
+
+    auto shape = [] (const HeterodyneOscillator::Sample& s, float m)
+    {
+        const float tri = triangle (s.phase, s.increment);
+        if (m < 0.5f) return s.value + (tri - s.value) * (m * 2.0f);
+        return tri + (sawtooth (s.phase, s.increment) - tri) * ((m - 0.5f) * 2.0f);
+    };
 
     for (int i = 0; i < n; ++i)
     {
-        // --- pitch glide (in the logarithmic / semitone domain)
-        if (env < 1.0e-4f || glideCoef >= 1.0f) curMidi = targetMidi;
-        else                                     curMidi += (targetMidi - curMidi) * glideCoef;
+        const float m  = morph.next();
+        const float la = layerAmt.next();
+        const float sa = subAmt.next();
+        polyGain += (targetPolyGain - polyGain) * 0.0005f;
 
-        // --- antenna response envelope
-        env += (targetAmp - env) * (targetAmp > env ? attackCoef : releaseCoef);
+        float sum = 0.0f;
+        for (auto& vc : voices)
+        {
+            if (vc.idle()) continue;
 
-        // --- human hand: vibrato + micro-jitter + drift
-        const float wander = nWander.next(), depthN = nDepth.next(), jit = nJitter.next();
-        const float ampN = nAmp.next(), driftN = nDrift.next();
+            // --- pitch glide (log domain); a voice starting from silence jumps
+            if (vc.env < 1.0e-4f || glideCoef >= 1.0f) vc.curMidi = vc.targetMidi;
+            else                                        vc.curMidi += (vc.targetMidi - vc.curMidi) * glideCoef;
 
-        const float gate = env > 0.02f ? 1.0f : 0.0f;
-        vibEnv += (gate - vibEnv) * vibOnsetCoef;
+            // --- antenna response envelope
+            vc.env += (vc.targetAmp - vc.env) * (vc.targetAmp > vc.env ? attackCoef : releaseCoef);
 
-        vibPhase += vibRate * (1.0f + 0.10f * hum * wander) / fs;
-        vibPhase -= std::floor (vibPhase);
-        const float lfo   = (float) std::sin (kTwoPi * vibPhase);
-        const float depth = vibDepth * vibEnv * (1.0f + 0.35f * hum * depthN);
-        const float cents = depth * lfo + hum * 9.0f * jit;
+            // --- human hand: vibrato + micro-jitter + drift
+            const float wander = vc.nWander.next(), depthN = vc.nDepth.next(), jit = vc.nJitter.next();
+            const float ampN = vc.nAmp.next(), driftN = vc.nDrift.next();
 
-        currentHz = clampv (midiToHz (curMidi + cents * 0.01f), 20.0f, 4200.0f);   // up to C8
+            const float gate = vc.env > 0.02f ? 1.0f : 0.0f;
+            vc.vibEnv += (gate - vc.vibEnv) * vibOnsetCoef;
 
-        osc.setDriftHz (driftAmt * (2.5 * driftN + 0.4 * jit));
-        const auto s = osc.process (currentHz);
+            vc.vibPhase += vibRate * (1.0f + 0.10f * hum * wander) / fs;
+            vc.vibPhase -= std::floor (vc.vibPhase);
+            const float lfo   = (float) std::sin (kTwoPi * vc.vibPhase);
+            const float depth = vibDepth * vc.vibEnv * (1.0f + 0.35f * hum * depthN);
+            const float cents = depth * lfo + hum * 9.0f * jit;
 
-        // --- continuous waveform morph  (0 sine .. 0.5 triangle .. 1 saw)
-        const float m   = morph.next();
-        const float tri = triangle (s.phase, s.increment);
-        float v;
-        if (m < 0.5f) v = s.value + (tri - s.value) * (m * 2.0f);
-        else          v = tri + (sawtooth (s.phase, s.increment) - tri) * ((m - 0.5f) * 2.0f);
+            const float midi = vc.curMidi + cents * 0.01f;
+            vc.hz = clampv (midiToHz (midi), 20.0f, 4200.0f);   // up to C8
 
-        // --- tremolo (same hand -> phase related to vibrato) + amplitude unsteadiness
-        const float tremLfo = 0.5f + 0.5f * (float) std::sin (kTwoPi * vibPhase + 1.1);
-        const float trem = 1.0f - tremDepth * 0.45f * tremLfo * (0.3f + 0.7f * vibEnv)
-                                - hum * 0.05f * (0.5f + 0.5f * ampN);
+            const double drift = driftAmt * (2.5 * driftN + 0.4 * jit);
+            vc.osc[0].setDriftHz (drift);
+            float v = shape (vc.osc[0].process (vc.hz), m);
 
-        dest[i] = voiceDc.process (v * env * trem * 0.5f);
+            // --- layering: two detuned unison copies (chorus of theremins)
+            if (la > 0.001f)
+            {
+                const float det = std::exp2 ((4.0f + 14.0f * la) / 1200.0f);
+                vc.osc[1].setDriftHz (-drift * 0.7);
+                vc.osc[2].setDriftHz (drift * 0.6);
+                const float l1 = shape (vc.osc[1].process (vc.hz * det), m);
+                const float l2 = shape (vc.osc[2].process (vc.hz / det), m);
+                v = (v + 0.75f * la * (l1 + l2)) / (1.0f + 0.9f * la);
+            }
+            // --- sub octave (pure heterodyne sine)
+            if (sa > 0.001f && vc.hz * 0.5f >= 20.0f)
+                v += 0.7f * sa * vc.osc[3].process (vc.hz * 0.5f).value;
+
+            // --- tremolo (same hand -> phase related to vibrato) + amplitude unsteadiness
+            const float tremLfo = 0.5f + 0.5f * (float) std::sin (kTwoPi * vc.vibPhase + 1.1);
+            const float trem = 1.0f - tremDepth * 0.45f * tremLfo * (0.3f + 0.7f * vc.vibEnv)
+                                    - hum * 0.05f * (0.5f + 0.5f * ampN);
+
+            sum += vc.dc.process (v * vc.env * trem * 0.5f);
+        }
+        dest[i] = sum * polyGain;
     }
 }
 
@@ -135,7 +188,7 @@ void ThereminEngine::processPost (float* mono, float* L, float* R, int n)
 {
     saturator.process (mono, n);
 
-    formant.setPitch (currentHz);
+    formant.setPitch (getCurrentHz());
     formant.setShift (timbreMod >= 0.0f ? (timbreMod - 0.5f) * 2.0f : 0.0f);
     formant.process (mono, n);
 

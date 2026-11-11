@@ -41,6 +41,10 @@ namespace ParamIDs
     // MIDI
     inline constexpr auto mpe         = "mpe";
     inline constexpr auto pbRange     = "pbRange";
+    // VOICES / LAYERING
+    inline constexpr auto playMode    = "playMode";
+    inline constexpr auto layer       = "layer";
+    inline constexpr auto sub         = "sub";
 }
 
 namespace Params
@@ -134,6 +138,12 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::mpe, 1 }, "MPE Mode", false));
     layout.add (std::make_unique<AudioParameterInt>  (ParameterID { ParamIDs::pbRange, 1 }, "Pitch Bend Range", 1, 24, 2,
         AudioParameterIntAttributes().withStringFromValueFunction ([] (int v, int) { return String (v) + " st"; })));
+
+    // VOICES / LAYERING
+    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::playMode, 1 }, "Play Mode",
+                                                        StringArray { "Poly", "Mono" }, 0));
+    addFloat (ParamIDs::layer, "Layer", { 0.0f, 1.0f }, 0.0f, pct);
+    addFloat (ParamIDs::sub,   "Sub Octave", { 0.0f, 1.0f }, 0.0f, pct);
 
     return layout;
 }

@@ -88,7 +88,16 @@ private:
         std::atomic<float>* delayTime; std::atomic<float>* delayFb; std::atomic<float>* delayMix;
         std::atomic<float>* revSize; std::atomic<float>* revMix; std::atomic<float>* output;
         std::atomic<float>* mpe; std::atomic<float>* pbRange;
+        std::atomic<float>* playMode; std::atomic<float>* layer; std::atomic<float>* sub;
     } raw {};
+
+    // polyphonic voice allocation
+    struct Slot { int note = -1, channel = 1; float velocity = 0.0f; bool on = false; uint32_t age = 0; };
+    std::array<Slot, av::ThereminEngine::maxVoices> slots {};
+    uint32_t noteCounter = 0;
+    void polyNoteOn (int note, int channel, float velocity);
+    void polyNoteOff (int note, int channel);
+    float noteMidi (int note, int channel, bool mpe, float tune, float pbRange) const;
 
     std::array<float, scopeSize> scope {};
     std::atomic<int> scopeWrite { 0 };

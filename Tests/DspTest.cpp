@@ -124,6 +124,34 @@ int main()
         if (std::abs (m - 440.0) > 0.5) ++failures;
     }
 
+    // ---------- 5) polyphony: C-E-G chord, all three fundamentals present, layering + sub stay finite
+    {
+        ThereminEngine e3; EngineParams q;
+        q.vibDepth = 0; q.humanize = 0; q.drift = 0; q.tremolo = 0; q.drive = 0; q.formant = 0;
+        q.delayMix = 0; q.reverbMix = 0; q.brightness = 1.0f; q.glideMs = 0; q.layer = 0.6f; q.sub = 0.4f;
+        e3.prepare (fs); e3.setParameters (q);
+        e3.setVoiceTarget (0, 60.0f, 0.8f); e3.setVoiceTarget (1, 64.0f, 0.8f); e3.setVoiceTarget (2, 67.0f, 0.8f);
+        const int N = (int) fs;
+        std::vector<float> m ((size_t) N), l ((size_t) N), r ((size_t) N);
+        for (int pos = 0; pos < N; pos += block)
+        {
+            const int n = std::min (block, N - pos);
+            e3.renderVoice (m.data() + pos, n);
+            e3.processPost (m.data() + pos, l.data() + pos, r.data() + pos, n);
+        }
+        bool ok = true;
+        for (float f0 : { 261.63f, 329.63f, 392.0f })
+        {
+            double re = 0, im = 0;
+            for (int i = N / 2; i < N; ++i) { re += l[(size_t) i] * std::cos (kTwoPi * f0 * i / fs); im += l[(size_t) i] * std::sin (kTwoPi * f0 * i / fs); }
+            const double mag = 2.0 * std::sqrt (re * re + im * im) / (N / 2);
+            std::printf ("poly  %.1f Hz magnitude %.3f\n", f0, mag);
+            if (mag < 0.02) ok = false;
+        }
+        for (float v : l) if (! std::isfinite (v)) ok = false;
+        if (! ok) ++failures;
+    }
+
     std::printf (failures ? "FAILURES: %d\n" : "ALL TESTS PASSED\n", failures);
     return failures ? 1 : 0;
 }

@@ -26,7 +26,8 @@ EnginePanel::EnginePanel (AudioProcessorValueTreeState& state) : apvts (state)
     rows.push_back ({ { "TONE", { knob (morph, "Waveform"), knob (drive, "Tube Drive"), knob (brightness, "Brightness"),
                                   choice (formant, "Body", { "Clean", "Ethereal", "Soprano", "Tube" }), knob (glide, "Glide") }, {} } });
     rows.push_back ({ { "MOVEMENT", { knob (vibDepth, "Vibrato"), knob (vibRate, "Vib Speed"), knob (humanize, "Humanize"),
-                                      knob (attack, "Attack"), knob (release, "Release") }, {} } });
+                                      knob (attack, "Attack"), knob (release, "Release") }, {} },
+                      { "VOICES", { choice (playMode, "Mode", { "Poly", "Mono" }), knob (layer, "Layer"), knob (sub, "Sub") }, {} } });
     rows.push_back ({ { "SPACE  &  TUNING", { knob (delayMix, "Echo"), knob (delayTime, "Echo Time"), knob (revMix, "Hall"),
                                               knob (quantAmount, "Snap"), choice (scale, "Scale", { "Chromatic", "Major", "Minor", "Penta Maj", "Penta Min" }) }, {} } });
     ignoreUnused (c);

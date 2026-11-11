@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <cstdint>
 
 AetherVoxProcessor::AetherVoxProcessor()
     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
@@ -18,7 +19,7 @@ AetherVoxProcessor::AetherVoxProcessor()
             get (morph), get (drive), get (brightness), get (formant), get (formantMix),
             get (vibDepth), get (vibRate), get (tremolo), get (humanize),
             get (delayTime), get (delayFb), get (delayMix), get (revSize), get (revMix), get (output),
-            get (mpe), get (pbRange) };
+            get (mpe), get (pbRange), get (playMode), get (layer), get (sub) };
 
     held.reserve (128);
 }
@@ -35,6 +36,7 @@ void AetherVoxProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     setLatencySamples (engine.getLatencySamples());
 
     held.clear();
+    for (auto& sl : slots) sl = Slot {};
     chanBend.fill (0.0f); chanPressure.fill (0.0f); chanTimbre.fill (0.5f);
     pressureSeen.fill (false); timbreSeen.fill (false);
     globalBend = 0.0f;
@@ -78,6 +80,8 @@ av::EngineParams AetherVoxProcessor::readParams() const
     p.reverbSize  = raw.revSize->load();
     p.reverbMix   = raw.revMix->load();
     p.outputDb    = raw.output->load();
+    p.layer       = raw.layer->load();
+    p.sub         = raw.sub->load();
     return p;
 }
 
@@ -104,11 +108,13 @@ void AetherVoxProcessor::handleMidi (const juce::MidiMessage& m)
                                     [&] (const HeldNote& h) { return h.note == note && h.channel == ch; }),
                     held.end());
         held.push_back ({ note, ch, m.getFloatVelocity() });
+        polyNoteOn (note, ch, m.getFloatVelocity());
         if (mpe && ch != 1) { pressureSeen[ci] = false; timbreSeen[ci] = false; }
     }
     else if (m.isNoteOff())
     {
         const int note = m.getNoteNumber();
+        polyNoteOff (note, ch);
         held.erase (std::remove_if (held.begin(), held.end(),
                                     [&] (const HeldNote& h) { return h.note == note && h.channel == ch; }),
                     held.end());
@@ -136,6 +142,7 @@ void AetherVoxProcessor::handleMidi (const juce::MidiMessage& m)
     else if (m.isAllNotesOff() || m.isAllSoundOff())
     {
         held.clear();
+        for (auto& sl : slots) sl.on = false;
     }
     else if (m.isResetAllControllers())
     {
@@ -152,6 +159,43 @@ void AetherVoxProcessor::handleMidi (const juce::MidiMessage& m)
     }
 }
 
+void AetherVoxProcessor::polyNoteOn (int note, int channel, float velocity)
+{
+    // same note retriggered -> reuse its voice
+    int best = -1;
+    for (int i = 0; i < (int) slots.size(); ++i)
+        if (slots[(size_t) i].note == note && slots[(size_t) i].channel == channel) { best = i; break; }
+
+    // otherwise the quietest free voice, otherwise steal the oldest held one
+    if (best < 0)
+    {
+        float quietest = 1.0e9f;
+        for (int i = 0; i < (int) slots.size(); ++i)
+            if (! slots[(size_t) i].on && engine.getVoiceEnvelope (i) < quietest) { quietest = engine.getVoiceEnvelope (i); best = i; }
+    }
+    if (best < 0)
+    {
+        uint32_t oldest = UINT32_MAX;
+        for (int i = 0; i < (int) slots.size(); ++i)
+            if (slots[(size_t) i].age < oldest) { oldest = slots[(size_t) i].age; best = i; }
+    }
+    slots[(size_t) best] = { note, channel, velocity, true, ++noteCounter };
+}
+
+void AetherVoxProcessor::polyNoteOff (int note, int channel)
+{
+    for (auto& sl : slots)
+        if (sl.on && sl.note == note && sl.channel == channel) sl.on = false;
+}
+
+float AetherVoxProcessor::noteMidi (int note, int channel, bool mpe, float tune, float pbRange) const
+{
+    const auto ci = (size_t) (channel - 1);
+    const float bend = mpe ? (channel != 1 ? chanBend[ci] * 48.0f : 0.0f) + chanBend[0] * pbRange
+                           : globalBend * pbRange;
+    return (float) note + tune + bend;
+}
+
 void AetherVoxProcessor::updateTargets()
 {
     const float tune     = raw.pitchTune->load();
@@ -160,44 +204,75 @@ void AetherVoxProcessor::updateTargets()
     const float span     = octaves * 12.0f;
     const bool  mpe      = raw.mpe->load() > 0.5f;
     const float pbRange  = raw.pbRange->load();
+    const bool  poly     = raw.playMode->load() < 0.5f;
+    const float gamma    = juce::jmap (raw.volSens->load(), 2.5f, 0.4f);   // volume antenna response
+    auto shapeAmp = [gamma] (float a) { return std::pow (juce::jlimit (0.0f, 1.0f, a), gamma); };
 
-    float midi = lastMidi, amp = 0.0f, timbre = -1.0f;
+    auto noteAmp = [&] (int channel, float velocity)
+    {
+        const auto ci = (size_t) (channel - 1);
+        float a = std::pow (velocity, 0.7f);
+        if (mpe && pressureSeen[ci]) a = chanPressure[ci];
+        if (ccVolumeSeen)            a *= ccVolume;
+        return shapeAmp (a);
+    };
+
+    float timbre = -1.0f;
     Source src = Source::Idle;
 
     if (padActive.load())
     {
-        midi = baseMidi + padPitch.load() * span;
-        amp  = padVolume.load();
-        src  = Source::Pad;
+        // the mouse "hands" play voice 0 like a classic theremin; other voices fall silent
+        lastMidi = baseMidi + padPitch.load() * span;
+        engine.setVoiceTarget (0, lastMidi, shapeAmp (padVolume.load()));
+        for (int v = 1; v < av::ThereminEngine::maxVoices; ++v) engine.setVoiceTarget (v, lastMidi, 0.0f);
+        engine.setLeadVoice (0);
+        src = Source::Pad;
     }
-    else if (! held.empty())
+    else if (poly)
     {
-        const auto& n  = held.back();
-        const auto  ci = (size_t) (n.channel - 1);
-        float bend;
-        if (mpe) bend = (n.channel != 1 ? chanBend[ci] * 48.0f : 0.0f) + chanBend[0] * pbRange;
-        else     bend = globalBend * pbRange;
-
-        midi = (float) n.note + tune + bend;
-        amp  = std::pow (n.velocity, 0.7f);
-        if (mpe && pressureSeen[ci]) amp = chanPressure[ci];
-        if (ccVolumeSeen)            amp *= ccVolume;
-        if (mpe && timbreSeen[ci])   timbre = chanTimbre[ci];
-        src = Source::Midi;
+        int leadVoice = -1; uint32_t newest = 0;
+        for (int v = 0; v < (int) slots.size(); ++v)
+        {
+            const auto& sl = slots[(size_t) v];
+            if (sl.note < 0) { engine.setVoiceTarget (v, lastMidi, 0.0f); continue; }
+            const float midi = noteMidi (sl.note, sl.channel, mpe, tune, pbRange);
+            engine.setVoiceTarget (v, midi, sl.on ? noteAmp (sl.channel, sl.velocity) : 0.0f);
+            if (sl.on && sl.age >= newest) { newest = sl.age; leadVoice = v; }
+            if (sl.on && mpe && timbreSeen[(size_t) (sl.channel - 1)]) timbre = chanTimbre[(size_t) (sl.channel - 1)];
+        }
+        if (leadVoice >= 0) { engine.setLeadVoice (leadVoice); src = Source::Midi; }
+        else if (ccVolumeSeen && ccVolume > 0.0f)
+        {
+            lastMidi = baseMidi + ccPitch * span;
+            engine.setVoiceTarget (0, lastMidi, shapeAmp (ccVolume));
+            engine.setLeadVoice (0);
+            src = Source::CC;
+        }
     }
-    else if (ccVolumeSeen && ccVolume > 0.0f)
+    else    // MONO: classic theremin, last-note priority with legato glide on voice 0
     {
-        midi = baseMidi + ccPitch * span;          // "CC theremin": CC1/74 = pitch hand
-        amp  = ccVolume;                           //                CC7/11 = volume hand
-        src  = Source::CC;
+        float midi = lastMidi, amp = 0.0f;
+        if (! held.empty())
+        {
+            const auto& n = held.back();
+            midi = noteMidi (n.note, n.channel, mpe, tune, pbRange);
+            amp  = noteAmp (n.channel, n.velocity);
+            if (mpe && timbreSeen[(size_t) (n.channel - 1)]) timbre = chanTimbre[(size_t) (n.channel - 1)];
+            src = Source::Midi;
+        }
+        else if (ccVolumeSeen && ccVolume > 0.0f)
+        {
+            midi = baseMidi + ccPitch * span;
+            amp  = shapeAmp (ccVolume);
+            src  = Source::CC;
+        }
+        lastMidi = midi;
+        engine.setVoiceTarget (0, midi, amp);
+        for (int v = 1; v < av::ThereminEngine::maxVoices; ++v) engine.setVoiceTarget (v, midi, 0.0f);
+        engine.setLeadVoice (0);
     }
 
-    // Volume sensitivity = response curve of the volume antenna
-    const float gamma = juce::jmap (raw.volSens->load(), 2.5f, 0.4f);
-    amp = std::pow (juce::jlimit (0.0f, 1.0f, amp), gamma);
-
-    lastMidi = midi;
-    engine.setTarget (midi, amp);
     engine.setTimbreModulation (timbre);
     dispSource.store ((int) src);
 }
