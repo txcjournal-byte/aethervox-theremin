@@ -217,7 +217,7 @@ void InstrumentView::drawTypography (Graphics& g)
     // spec sheet
     g.setFont (uiFont (12.5f).withExtraKerningFactor (0.18f));
     g.setColour (chalk.withAlpha (0.38f));
-    const char* specs[] = { "DUAL RF OSCILLATORS  170 kHz", "20 Hz  -  3 kHz", "4x OVERSAMPLED TUBE STAGE", "TAPE ECHO  /  FDN HALL" };
+    const char* specs[] = { "DUAL RF OSCILLATORS  170 kHz", "C1 - C8   /   32 Hz  -  4.2 kHz", "4x OVERSAMPLED TUBE STAGE", "TAPE ECHO  /  FDN HALL" };
     for (int i = 0; i < 4; ++i)
         g.drawText (specs[i], Rectangle<float> (x + 3.0f, 186.0f + (float) i * 22.0f, 500.0f, 16.0f), Justification::centredLeft);
 

@@ -110,7 +110,7 @@ void ThereminEngine::renderVoice (float* dest, int n)
         const float depth = vibDepth * vibEnv * (1.0f + 0.35f * hum * depthN);
         const float cents = depth * lfo + hum * 9.0f * jit;
 
-        currentHz = clampv (midiToHz (curMidi + cents * 0.01f), 20.0f, 3000.0f);
+        currentHz = clampv (midiToHz (curMidi + cents * 0.01f), 20.0f, 4200.0f);   // up to C8
 
         osc.setDriftHz (driftAmt * (2.5 * driftN + 0.4 * jit));
         const auto s = osc.process (currentHz);

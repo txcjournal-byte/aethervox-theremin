@@ -49,8 +49,9 @@ inline juce::StringArray scaleNames()   { return { "Chromatic", "Major", "Minor"
 inline juce::StringArray rootNames()    { return { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }; }
 inline juce::StringArray formantNames() { return { "Off", "Ethereal / Sci-Fi", "Soprano Voice", "Vintage Tube" }; }
 
-/** Base note of the pitch field (proximity 0) before tuning: C2 = 65.4 Hz */
-inline constexpr float pitchFieldBaseMidi = 36.0f;
+/** Base note of the pitch field (proximity 0) before tuning: C1 = 32.7 Hz.
+    With the default 6-octave sensitivity the field spans C1 .. C7. */
+inline constexpr float pitchFieldBaseMidi = 24.0f;
 
 inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 {
@@ -82,7 +83,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 
     // PITCH
     addFloat (ParamIDs::pitchTune,   "Pitch Tuning",      { -12.0f, 12.0f, 0.01f }, 0.0f, semis);
-    addFloat (ParamIDs::pitchSens,   "Pitch Sensitivity", { 1.0f, 7.0f, 0.01f }, 4.0f, oct);
+    addFloat (ParamIDs::pitchSens,   "Pitch Sensitivity", { 1.0f, 8.0f, 0.01f }, 6.0f, oct);
     addFloat (ParamIDs::glide,       "Glide",             skewed (0.0f, 2000.0f, 150.0f), 85.0f, ms);
     addFloat (ParamIDs::quantAmount, "Pitch Quantize",    { 0.0f, 1.0f }, 0.0f, pct);
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::scale, 1 }, "Scale", scaleNames(), 0));
