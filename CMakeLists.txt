@@ -37,9 +37,9 @@ if(APPLE)
 endif()
 
 juce_add_plugin(AetherVox
-    COMPANY_NAME                "AetherVox Audio"
-    COMPANY_WEBSITE             "https://example.com"
-    BUNDLE_ID                   com.aethervox.theremin
+    COMPANY_NAME                "TrapWin"
+    COMPANY_WEBSITE             "https://trapwin.com"
+    BUNDLE_ID                   com.trapwin.aethervox
     PLUGIN_MANUFACTURER_CODE    Aevx
     PLUGIN_CODE                 Aetv
     PRODUCT_NAME                "AetherVox Theremin"
