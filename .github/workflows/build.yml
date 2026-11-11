@@ -1,6 +1,9 @@
-# Builds AetherVox on GitHub (Windows VST3 + Standalone, macOS VST3/AU) - download from the run's Artifacts.
+# Builds AetherVox (Windows VST3 + Standalone, macOS VST3/AU + Standalone)
+# and publishes ready-to-install zips as a GitHub Release.
 name: build
 on: [push, workflow_dispatch]
+permissions:
+  contents: write
 jobs:
   build:
     strategy:
@@ -15,10 +18,23 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test DSP
         run: ctest --test-dir build -C Release --output-on-failure
-      - uses: actions/upload-artifact@v4
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $r = "build/AetherVox_artefacts/Release"
+          New-Item -ItemType Directory -Force -Path pkg | Out-Null
+          Copy-Item -Recurse "$r/VST3/AetherVox Theremin.vst3" pkg/
+          Copy-Item "$r/Standalone/AetherVox Theremin.exe" pkg/
+          Compress-Archive -Path pkg/* -DestinationPath AetherVox-Windows.zip -Force
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          r="build/AetherVox_artefacts/Release"
+          mkdir -p pkg && cp -R "$r/VST3/AetherVox Theremin.vst3" "$r/AU/AetherVox Theremin.component" "$r/Standalone/AetherVox Theremin.app" pkg/
+          (cd pkg && zip -qry ../AetherVox-macOS.zip .)
+      - uses: softprops/action-gh-release@v2
         with:
-          name: AetherVox-${{ matrix.os }}
-          path: |
-            build/AetherVox_artefacts/Release/VST3
-            build/AetherVox_artefacts/Release/AU
-            build/AetherVox_artefacts/Release/Standalone
+          tag_name: v1.0.${{ github.run_number }}
+          name: AetherVox Theremin v1.0.${{ github.run_number }}
+          files: AetherVox-*.zip
