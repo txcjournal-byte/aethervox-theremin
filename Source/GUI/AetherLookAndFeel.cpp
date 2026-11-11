@@ -43,15 +43,15 @@ void AetherLookAndFeel::drawRotarySlider (Graphics& g, int x, int y, int width, 
     Path track;
     track.addCentredArc (c.x, c.y, radius - 2.0f, radius - 2.0f, 0.0f, startAngle, endAngle, true);
     g.setColour (Palette::panelEdge);
-    g.strokePath (track, PathStrokeType (3.0f, PathStrokeType::curved, PathStrokeType::rounded));
+    g.strokePath (track, PathStrokeType (4.5f, PathStrokeType::curved, PathStrokeType::rounded));
 
     // value arc + glow
     Path arc;
     arc.addCentredArc (c.x, c.y, radius - 2.0f, radius - 2.0f, 0.0f, startAngle, angle, true);
     g.setColour (accent.withAlpha (hover ? 0.35f : 0.22f));
-    g.strokePath (arc, PathStrokeType (7.0f, PathStrokeType::curved, PathStrokeType::rounded));
+    g.strokePath (arc, PathStrokeType (10.0f, PathStrokeType::curved, PathStrokeType::rounded));
     g.setColour (accent);
-    g.strokePath (arc, PathStrokeType (3.0f, PathStrokeType::curved, PathStrokeType::rounded));
+    g.strokePath (arc, PathStrokeType (4.5f, PathStrokeType::curved, PathStrokeType::rounded));
 
     // knob body: black knurled skirt + brushed chrome cap
     const float kr = radius * 0.72f;
@@ -107,8 +107,8 @@ void AetherLookAndFeel::drawToggleButton (Graphics& g, ToggleButton& b, bool hig
 
     // caption
     g.setColour (Palette::text);
-    g.setFont (uiFont (12.0f, true));
-    g.drawText (b.getButtonText(), r.removeFromTop (18.0f), Justification::centred);
+    g.setFont (uiFont (19.0f, true));
+    g.drawText (b.getButtonText(), r.removeFromTop (26.0f), Justification::centred);
 
     // pill switch
     const auto pill = Rectangle<float> (44.0f, 22.0f).withCentre (r.getCentre().translated (0.0f, -6.0f));
@@ -129,10 +129,10 @@ void AetherLookAndFeel::drawToggleButton (Graphics& g, ToggleButton& b, bool hig
 Label* AetherLookAndFeel::createSliderTextBox (Slider& s)
 {
     auto* l = LookAndFeel_V4::createSliderTextBox (s);
-    l->setFont (uiFont (11.5f));
+    l->setFont (uiFont (19.0f));
     l->setJustificationType (Justification::centred);
     l->setColour (Label::outlineColourId, Colours::transparentBlack);
     l->setColour (Label::backgroundColourId, Colours::transparentBlack);
-    l->setColour (Label::textColourId, Palette::textDim.brighter (0.3f));
+    l->setColour (Label::textColourId, Palette::text.withAlpha (0.8f));
     return l;
 }

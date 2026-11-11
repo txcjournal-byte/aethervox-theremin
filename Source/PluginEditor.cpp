@@ -22,18 +22,13 @@ EnginePanel::EnginePanel (AudioProcessorValueTreeState& state) : apvts (state)
     using namespace ParamIDs;
     const Colour c = Palette::pitch;
 
-    rows.push_back ({ { "PITCH", { knob (pitchTune, "Tuning"), knob (pitchSens, "Sensitivity"), knob (glide, "Glide"),
-                                   knob (quantAmount, "Quantize"),
-                                   choice (scale, "Scale", { "Chromatic", "Major", "Minor", "Penta Maj", "Penta Min" }),
-                                   choice (root, "Root") }, {} },
-                      { "TIMBRE", { knob (morph, "Morph"), knob (drive, "Tube Drive"), knob (brightness, "Brightness"),
-                                    choice (formant, "Formant", { "Off", "Ethereal", "Soprano", "Tube" }), knob (formantMix, "Formant Mix") }, {} } });
-    rows.push_back ({ { "VOLUME & EXPRESSION", { knob (volSens, "Vol Sens"), knob (attack, "Attack"), knob (release, "Release") }, {} },
-                      { "HETERODYNE", { knob (coupling, "RF Coupling"), knob (drift, "RF Drift") }, {} },
-                      { "HUMANIZE", { knob (vibDepth, "Vib Depth"), knob (vibRate, "Vib Rate"), knob (tremolo, "Tremolo"), knob (humanize, "Humanize") }, {} } });
-    rows.push_back ({ { "TAPE ECHO / HALL", { knob (delayTime, "Delay Time"), knob (delayFb, "Feedback"), knob (delayMix, "Delay Mix"),
-                                              knob (revSize, "Rev Size"), knob (revMix, "Rev Mix"), knob (output, "Output") }, {} },
-                      { "MIDI", { toggle (mpe, "MPE"), knob (pbRange, "PB Range") }, {} } });
+    // Only the controls that shape the sound musically; everything else keeps tuned defaults.
+    rows.push_back ({ { "TONE", { knob (morph, "Waveform"), knob (drive, "Tube Drive"), knob (brightness, "Brightness"),
+                                  choice (formant, "Body", { "Clean", "Ethereal", "Soprano", "Tube" }), knob (glide, "Glide") }, {} } });
+    rows.push_back ({ { "MOVEMENT", { knob (vibDepth, "Vibrato"), knob (vibRate, "Vib Speed"), knob (humanize, "Humanize"),
+                                      knob (attack, "Attack"), knob (release, "Release") }, {} } });
+    rows.push_back ({ { "SPACE  &  TUNING", { knob (delayMix, "Echo"), knob (delayTime, "Echo Time"), knob (revMix, "Hall"),
+                                              knob (quantAmount, "Snap"), choice (scale, "Scale", { "Chromatic", "Major", "Minor", "Penta Maj", "Penta Min" }) }, {} } });
     ignoreUnused (c);
 
     close.setColour (TextButton::buttonColourId, Colours::transparentBlack);
@@ -41,6 +36,7 @@ EnginePanel::EnginePanel (AudioProcessorValueTreeState& state) : apvts (state)
     close.setColour (TextButton::textColourOffId, chalk.withAlpha (0.7f));
     close.setColour (ComboBox::outlineColourId, Colours::transparentBlack);
     close.onClick = [this] { if (onClose) onClose(); };
+    close.setButtonText ("CLOSE  X");
     addAndMakeVisible (close);
 }
 
@@ -74,7 +70,7 @@ void EnginePanel::layoutRow (std::vector<Section>& row, Rectangle<int> area, int
     {
         const int w = cell * (int) s.items.size();
         s.bounds = { x, area.getY(), w, area.getHeight() };
-        auto inner = s.bounds.withTrimmedTop (26);
+        auto inner = s.bounds.withTrimmedTop (40);
         for (auto* c : s.items) c->setBounds (inner.removeFromLeft (cell));
         x += w + gap;
     }
@@ -83,11 +79,11 @@ void EnginePanel::layoutRow (std::vector<Section>& row, Rectangle<int> area, int
 void EnginePanel::resized()
 {
     auto r = getLocalBounds().reduced (56, 0);
-    auto top = r.removeFromTop (78);
-    close.setBounds (top.removeFromRight (110).withSizeKeepingCentre (110, 34));
+    auto top = r.removeFromTop (84);
+    close.setBounds (top.removeFromRight (170).withSizeKeepingCentre (170, 50));
     const int rowH = (r.getHeight() - 30) / 3;
     for (size_t i = 0; i < rows.size(); ++i)
-        layoutRow (rows[i], r.withY (r.getY() + (int) i * rowH).withHeight (rowH - 8), 108);
+        layoutRow (rows[i], r.withY (r.getY() + (int) i * rowH).withHeight (rowH - 8), 200);
 }
 
 void EnginePanel::paint (Graphics& g)
@@ -100,23 +96,25 @@ void EnginePanel::paint (Graphics& g)
     g.fillRect (b.withHeight (1.0f));
 
     g.setColour (chalk.withAlpha (0.92f));
-    g.setFont (uiFont (30.0f).withExtraKerningFactor (0.4f));
-    g.drawText ("ENGINE", Rectangle<float> (56.0f, 22.0f, 400.0f, 40.0f), Justification::centredLeft);
+    g.setFont (uiFont (40.0f).withExtraKerningFactor (0.35f));
+    g.drawText ("ENGINE", Rectangle<float> (56.0f, 16.0f, 400.0f, 50.0f), Justification::centredLeft);
     g.setColour (red);
     g.fillRect (60.0f, 66.0f, 40.0f, 2.0f);
     g.setColour (chalk.withAlpha (0.4f));
-    g.setFont (uiFont (12.0f).withExtraKerningFactor (0.3f));
-    g.drawText ("AETHERVOX  /  HETERODYNE SYNTHESIS", Rectangle<float> (290.0f, 30.0f, 600.0f, 24.0f), Justification::centredLeft);
+    g.setFont (uiFont (18.0f).withExtraKerningFactor (0.2f));
+    g.drawText ("AETHERVOX  /  HETERODYNE SYNTHESIS", Rectangle<float> (330.0f, 28.0f, 700.0f, 28.0f), Justification::centredLeft);
 
     for (const auto& row : rows)
         for (const auto& s : row)
         {
             const auto r = s.bounds.toFloat();
-            g.setColour (chalk.withAlpha (0.55f));
-            g.setFont (uiFont (11.0f, true).withExtraKerningFactor (0.3f));
-            g.drawText (s.title, r.withHeight (16.0f), Justification::centredLeft);
-            g.setColour (chalk.withAlpha (0.08f));
-            g.fillRect (r.getX(), r.getY() + 19.0f, r.getWidth(), 1.0f);
+            g.setColour (red);
+            g.fillRect (r.getX(), r.getY() + 6.0f, 3.0f, 18.0f);
+            g.setColour (chalk.withAlpha (0.8f));
+            g.setFont (uiFont (20.0f, true).withExtraKerningFactor (0.25f));
+            g.drawText (s.title, r.withHeight (30.0f).withTrimmedLeft (14.0f), Justification::centredLeft);
+            g.setColour (chalk.withAlpha (0.10f));
+            g.fillRect (r.getX(), r.getY() + 34.0f, r.getWidth(), 1.0f);
         }
 }
 
@@ -147,7 +145,7 @@ AetherVoxEditor::AetherVoxEditor (AetherVoxProcessor& p)
     }
 
     engine.onClose = [this] { setEngineOpen (false); };
-    engine.setBounds (0, designHeight, designWidth, 600);
+    engine.setBounds (0, designHeight, designWidth, 720);
     body.addChildComponent (engine);
 
     // default size: about half the screen width (fits comfortably inside the DAW), resizable from the corner

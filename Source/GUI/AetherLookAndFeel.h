@@ -56,7 +56,9 @@ public:
                            bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 
     juce::Label* createSliderTextBox (juce::Slider&) override;
-    juce::Font getComboBoxFont (juce::ComboBox&) override        { return uiFont (11.5f); }
+    juce::Font getComboBoxFont (juce::ComboBox&) override        { return uiFont (19.0f); }
     juce::Font getPopupMenuFont() override                       { return uiFont (14.0f); }
+    juce::Font getTextButtonFont (juce::TextButton&, int) override { return uiFont (20.0f, true); }
+    juce::Font getSliderPopupFont (juce::Slider&) override        { return uiFont (15.0f, true); }
     juce::Font getLabelFont (juce::Label& l) override            { return l.getFont(); }
 };

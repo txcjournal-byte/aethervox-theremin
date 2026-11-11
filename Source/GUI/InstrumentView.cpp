@@ -211,15 +211,15 @@ void InstrumentView::drawTypography (Graphics& g)
     g.setColour (red);
     g.fillRect (x + 3.0f, 152.0f, 46.0f, 2.0f);
     g.setColour (chalk.withAlpha (0.6f));
-    g.setFont (uiFont (14.0f, true).withExtraKerningFactor (0.45f));
-    g.drawText ("HETERODYNE THEREMIN", Rectangle<float> (x + 62.0f, 144.0f, 500.0f, 18.0f), Justification::centredLeft);
+    g.setFont (uiFont (19.0f, true).withExtraKerningFactor (0.38f));
+    g.drawText ("HETERODYNE THEREMIN", Rectangle<float> (x + 62.0f, 141.0f, 560.0f, 24.0f), Justification::centredLeft);
 
     // spec sheet
-    g.setFont (uiFont (12.5f).withExtraKerningFactor (0.18f));
-    g.setColour (chalk.withAlpha (0.38f));
+    g.setFont (uiFont (18.0f).withExtraKerningFactor (0.12f));
+    g.setColour (chalk.withAlpha (0.55f));
     const char* specs[] = { "DUAL RF OSCILLATORS  170 kHz", "C1 - C8   /   32 Hz  -  4.2 kHz", "4x OVERSAMPLED TUBE STAGE", "TAPE ECHO  /  FDN HALL" };
     for (int i = 0; i < 4; ++i)
-        g.drawText (specs[i], Rectangle<float> (x + 3.0f, 186.0f + (float) i * 22.0f, 500.0f, 16.0f), Justification::centredLeft);
+        g.drawText (specs[i], Rectangle<float> (x + 3.0f, 184.0f + (float) i * 28.0f, 640.0f, 24.0f), Justification::centredLeft);
 
     // live reading, like an instrument cluster
     int cents = 0;
@@ -233,37 +233,37 @@ void InstrumentView::drawTypography (Graphics& g)
         hz = String (shownHz, 1);
     }
     g.setColour (chalk.withAlpha (0.92f));
-    g.setFont (uiFont (54.0f));
-    g.drawText (note, Rectangle<float> (x, 300.0f, 220.0f, 60.0f), Justification::centredLeft);
-    g.setColour (chalk.withAlpha (0.55f));
-    g.setFont (uiFont (15.0f).withExtraKerningFactor (0.2f));
-    g.drawText (hz + " HZ", Rectangle<float> (x + 200.0f, 306.0f, 200.0f, 20.0f), Justification::centredLeft);
+    g.setFont (uiFont (64.0f));
+    g.drawText (note, Rectangle<float> (x, 310.0f, 220.0f, 70.0f), Justification::centredLeft);
+    g.setColour (chalk.withAlpha (0.75f));
+    g.setFont (uiFont (22.0f).withExtraKerningFactor (0.12f));
+    g.drawText (hz + " HZ", Rectangle<float> (x + 210.0f, 314.0f, 260.0f, 28.0f), Justification::centredLeft);
     g.drawText ((shownHz > 0.0f ? (cents >= 0 ? "+" : "") + String (cents) : String ("--")) + " CENT",
-                Rectangle<float> (x + 200.0f, 330.0f, 200.0f, 20.0f), Justification::centredLeft);
+                Rectangle<float> (x + 210.0f, 346.0f, 260.0f, 28.0f), Justification::centredLeft);
 
     // level bar
-    const auto bar = Rectangle<float> (x + 3.0f, 380.0f, 300.0f, 2.0f);
+    const auto bar = Rectangle<float> (x + 3.0f, 396.0f, 360.0f, 3.0f);
     g.setColour (chalk.withAlpha (0.12f));
     g.fillRect (bar);
     g.setColour (red);
     g.fillRect (bar.withWidth (bar.getWidth() * jlimit (0.0f, 1.0f, shownVol)));
 
     // discreet hint
-    g.setColour (chalk.withAlpha (0.30f));
-    g.setFont (uiFont (11.0f).withExtraKerningFactor (0.15f));
+    g.setColour (chalk.withAlpha (0.55f));
+    g.setFont (uiFont (17.0f).withExtraKerningFactor (0.08f));
     g.drawText ("HOLD THE MOUSE AND MOVE  -  TOWARD THE ROD = HIGHER  -  UP = LOUDER  -  RELEASE = SILENCE  -  TOUCH THE DISPLAY FOR THE ENGINE",
-                Rectangle<float> (0, Art::H - 34.0f, Art::W, 16.0f), Justification::centred);
+                Rectangle<float> (0, Art::H - 44.0f, Art::W, 26.0f), Justification::centred);
 
     // engraved knob legends on the front panel
     const char* legends[6] = { "TUNE", "GLIDE", "VIBRATO", "DRIVE", "REVERB", "VOLUME" };
-    g.setColour (Colours::white.withAlpha (0.55f));
-    g.setFont (uiFont (8.0f, true).withExtraKerningFactor (0.45f));
+    g.setColour (Colours::white.withAlpha (0.75f));
+    g.setFont (uiFont (12.5f, true).withExtraKerningFactor (0.2f));
     for (int i = 0; i < 6; ++i)
-        g.drawText (legends[i], Rectangle<float> (Art::knobX[i] - 40.0f, Art::knobY - 41.0f, 80.0f, 10.0f), Justification::centred);
+        g.drawText (legends[i], Rectangle<float> (Art::knobX[i] - 48.0f, Art::knobY - 46.0f, 96.0f, 15.0f), Justification::centred);
 
     // engraved wordmark on the front panel
-    g.setColour (Colours::white.withAlpha (0.42f));
-    g.setFont (uiFont (8.5f, true).withExtraKerningFactor (0.6f));
+    g.setColour (Colours::white.withAlpha (0.55f));
+    g.setFont (uiFont (11.5f, true).withExtraKerningFactor (0.45f));
     g.drawText ("AETHERVOX", Rectangle<float> (Art::wordX - 80.0f, Art::wordY - 6.0f, 160.0f, 12.0f), Justification::centred);
 }
 
@@ -401,7 +401,7 @@ void InstrumentView::drawDisplay (Graphics& g)
     float peak = 0.02f;
     for (int i = 0; i < len; ++i) peak = jmax (peak, std::abs (scope[(size_t) (start + i)]));
 
-    const auto wave = d.withTrimmedTop (14.0f);
+    const auto wave = d.withTrimmedTop (18.0f);
     Path w;
     for (int i = 0; i < len; ++i)
     {
@@ -424,10 +424,10 @@ void InstrumentView::drawDisplay (Graphics& g)
         note = String (kNoteNames[((n % 12) + 12) % 12]) + String (n / 12 - 1);
     }
     g.setColour (chalk.withAlpha (0.8f));
-    g.setFont (uiFont (10.0f, true).withExtraKerningFactor (0.2f));
-    g.drawText (note, d.withHeight (12.0f), Justification::centredLeft);
+    g.setFont (uiFont (14.0f, true).withExtraKerningFactor (0.1f));
+    g.drawText (note, d.withHeight (16.0f), Justification::centredLeft);
     g.setColour (chalk.withAlpha (0.45f));
-    g.drawText (shownHz > 0.0f ? String (shownHz, 1) + " HZ" : String ("ENGINE"), d.withHeight (12.0f), Justification::centredRight);
+    g.drawText (shownHz > 0.0f ? String (shownHz, 1) + " HZ" : String ("ENGINE"), d.withHeight (16.0f), Justification::centredRight);
 }
 
 // =============================================================================

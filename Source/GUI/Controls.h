@@ -10,17 +10,17 @@ public:
                   const juce::String& caption, juce::Colour accent)
     {
         slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 80, 16);
+        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 160, 28);
         slider.setColour (juce::Slider::rotarySliderFillColourId, accent);
         slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
         slider.setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
-        slider.setColour (juce::Slider::textBoxTextColourId, Palette::textDim.brighter (0.3f));
+        slider.setColour (juce::Slider::textBoxTextColourId, Palette::text.withAlpha (0.8f));
         slider.setRotaryParameters (juce::MathConstants<float>::pi * 1.25f,
                                     juce::MathConstants<float>::pi * 2.75f, true);
         addAndMakeVisible (slider);
 
         label.setText (caption.toUpperCase(), juce::dontSendNotification);
-        label.setFont (uiFont (11.0f, true));
+        label.setFont (uiFont (19.0f, true));
         label.setJustificationType (juce::Justification::centred);
         label.setColour (juce::Label::textColourId, Palette::text);
         label.setInterceptsMouseClicks (false, false);
@@ -38,8 +38,8 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        label.setBounds (r.removeFromTop (16));
-        slider.setBounds (r.reduced (2, 0));
+        label.setBounds (r.removeFromTop (26));
+        slider.setBounds (r.reduced (8, 0));
     }
 
     juce::Slider slider;
@@ -66,7 +66,7 @@ public:
         addAndMakeVisible (box);
 
         label.setText (caption.toUpperCase(), juce::dontSendNotification);
-        label.setFont (uiFont (11.0f, true));
+        label.setFont (uiFont (19.0f, true));
         label.setJustificationType (juce::Justification::centred);
         label.setColour (juce::Label::textColourId, Palette::text);
         addAndMakeVisible (label);
@@ -77,8 +77,8 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        label.setBounds (r.removeFromTop (16));
-        box.setBounds (r.withSizeKeepingCentre (r.getWidth() - 6, 26).translated (0, -8));
+        label.setBounds (r.removeFromTop (26));
+        box.setBounds (r.withSizeKeepingCentre (r.getWidth() - 16, 46).translated (0, -14));
     }
 
     juce::ComboBox box;
