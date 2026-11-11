@@ -150,13 +150,17 @@ AetherVoxEditor::AetherVoxEditor (AetherVoxProcessor& p)
     engine.setBounds (0, designHeight, designWidth, 600);
     body.addChildComponent (engine);
 
+    // default size: about half the screen width (fits comfortably inside the DAW), resizable from the corner
+    int startW = 800;
+    if (auto* d = Desktop::getInstance().getDisplays().getPrimaryDisplay())
+        startW = jlimit (560, 960, roundToInt (d->userArea.getWidth() * 0.55));
     setResizable (true, true);
-    setResizeLimits (designWidth * 45 / 100, designHeight * 45 / 100, designWidth * 3 / 2, designHeight * 3 / 2);
+    setResizeLimits (designWidth * 30 / 100, designHeight * 30 / 100, designWidth * 3 / 2, designHeight * 3 / 2);
     if (auto* c = getConstrainer()) c->setFixedAspectRatio ((double) designWidth / designHeight);
-    setSize (designWidth * 72 / 100, designHeight * 72 / 100);
+    setSize (startW, startW * designHeight / designWidth);
 
     lastTick = Time::getMillisecondCounterHiRes() > 0 ? (int64) Time::getMillisecondCounterHiRes() : 0;
-    startTimerHz (60);
+    startTimerHz (30);
 }
 
 AetherVoxEditor::~AetherVoxEditor()

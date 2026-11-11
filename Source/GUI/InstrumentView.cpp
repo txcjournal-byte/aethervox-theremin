@@ -17,7 +17,7 @@ namespace
 InstrumentView::InstrumentView (AetherVoxProcessor& p) : proc (p)
 {
     render = ImageCache::getFromMemory (BinaryData::aethervox_render_jpg, BinaryData::aethervox_render_jpgSize);
-    sketch = ImageCache::getFromMemory (BinaryData::aethervox_sketch_png, BinaryData::aethervox_sketch_pngSize);
+    sketch = ImageCache::getFromMemory (BinaryData::aethervox_sketch_jpg, BinaryData::aethervox_sketch_jpgSize);
     setMouseCursor (MouseCursor::CrosshairCursor);
     sparks.reserve (256);
 }
@@ -54,32 +54,26 @@ void InstrumentView::mouseDown (const MouseEvent& e)
         if (onDisplayClicked) onDisplayClicked();
         return;
     }
-    if (p.y > Art::playBotY && p.x < Art::zoneSplitX) return;      // cabinet itself
-    grab = p.x < Art::zoneSplitX ? Grab::Pitch : Grab::Volume;
+    grab = Grab::Play;
     applyMouse (p);
 }
 
 void InstrumentView::mouseDrag (const MouseEvent& e) { if (grab != Grab::None) applyMouse (e.position); }
-void InstrumentView::mouseUp   (const MouseEvent&)   { grab = Grab::None; }
 
-void InstrumentView::mouseDoubleClick (const MouseEvent& e)
+void InstrumentView::mouseUp (const MouseEvent&)
 {
-    if (e.position.x >= Art::zoneSplitX) { handVolume = 0.0f; syncPad(); }
+    if (grab == Grab::None) return;
+    grab = Grab::None;
+    handVolume = 0.0f;                  // hands leave the field -> note fades out (Release)
+    syncPad();
 }
 
 void InstrumentView::applyMouse (Point<float> p)
 {
-    if (grab == Grab::Pitch)
-    {
-        pitchY = jlimit (Art::playTopY + 40.0f, Art::playBotY - 40.0f, p.y);
-        const float near = rodXAt (pitchY) + 22.0f;
-        handPitch = jlimit (0.0f, 1.0f, 1.0f - (p.x - near) / (Art::pitchFarX - near));
-    }
-    else if (grab == Grab::Volume)
-    {
-        const float lowY = Art::loopCY - Art::loopRY - 34.0f, highY = 420.0f;
-        handVolume = jlimit (0.0f, 1.0f, (lowY - p.y) / (lowY - highY));
-    }
+    pitchY = jlimit (Art::rodTopY + 60.0f, Art::rodBotY - 40.0f, p.y);
+    const float near = rodXAt (pitchY) + 22.0f;
+    handPitch  = jlimit (0.0f, 1.0f, 1.0f - (p.x - near) / (Art::pitchFarX - near));
+    handVolume = jlimit (0.0f, 1.0f, (Art::playBotY - p.y) / (Art::playBotY - Art::playTopY));
     syncPad();
 }
 
@@ -87,7 +81,7 @@ void InstrumentView::syncPad()
 {
     proc.padPitch.store (handPitch);
     proc.padVolume.store (handVolume);
-    proc.padActive.store (handVolume > 0.001f);
+    proc.padActive.store (grab != Grab::None);
 }
 
 // =============================================================================
@@ -127,7 +121,7 @@ void InstrumentView::tick (float dt)
 
 float InstrumentView::getRevealX() const
 {
-    return Art::W * smooth ((introT - 0.9f) / 1.4f);
+    return Art::W * smooth ((introT - 0.25f) / 0.8f);
 }
 
 // =============================================================================
@@ -138,21 +132,21 @@ void InstrumentView::paint (Graphics& g)
     g.fillAll (Colours::black);
     drawIntro (g);                       // sketch -> render (render stays once revealed)
 
-    const float reveal = smooth ((introT - 0.9f) / 1.4f);
+    const float reveal = smooth ((introT - 0.25f) / 0.8f);
     if (reveal <= 0.0f) return;
 
-    g.saveState();
-    g.setOpacity (1.0f);
-    const bool padMode = handVolume > 0.001f || grab != Grab::None;
+    const bool padMode = grab != Grab::None;
     const float prox = padMode ? handPitch  : shownProx;
     const float vol  = padMode ? handVolume : shownVol;
     const float energy = 0.08f + 0.92f * shownVol;
 
     const Point<float> pitchTip (pitchTipX (prox, pitchY), pitchY);
     const Point<float> volTip   (Art::loopCX, volumeTipY (vol));
+    ignoreUnused (vol);
 
-    // UI layers fade in with the reveal
-    g.beginTransparencyLayer (reveal);
+    // UI layers fade in with the reveal (no extra layer once fully shown: cheaper)
+    const bool layered = reveal < 1.0f;
+    if (layered) g.beginTransparencyLayer (reveal);
     drawTypography (g);
     drawPitchField (g, pitchTip, energy);
     drawVolumeField (g, volTip, energy);
@@ -160,22 +154,34 @@ void InstrumentView::paint (Graphics& g)
     drawFingertip (g, pitchTip, energy);
     drawFingertip (g, volTip, energy);
     drawDisplay (g);
-    g.endTransparencyLayer();
-    g.restoreState();
+    if (layered) g.endTransparencyLayer();
 }
 
 void InstrumentView::drawIntro (Graphics& g)
 {
     const auto full = Rectangle<float> (0, 0, Art::W, Art::H);
-    const float hold = 0.9f, wipe = 1.4f;
+    const float hold = 0.25f, wipe = 0.8f;
     const float p = smooth ((introT - hold) / wipe);
 
     if (p < 1.0f)
     {
         // the chalk drawing fades in, then waits to be "rendered"
-        g.setOpacity (smooth (introT / 0.5f));
+        g.setOpacity (smooth (introT / 0.2f));
         g.drawImage (sketch, full);
         g.setOpacity (1.0f);
+    }
+    if (p >= 1.0f)
+    {
+        // fully revealed: blit a copy pre-scaled to the real pixel size (no per-frame resampling)
+        const float scale = g.getInternalContext().getPhysicalPixelScaleFactor();
+        if (std::abs (scale - renderScaledFor) > 0.001f || renderScaled.isNull())
+        {
+            const int w = jmax (1, roundToInt (Art::W * scale)), h = jmax (1, roundToInt (Art::H * scale));
+            renderScaled = render.rescaled (w, h, Graphics::highResamplingQuality);
+            renderScaledFor = scale;
+        }
+        g.drawImageTransformed (renderScaled, AffineTransform::scale (1.0f / scale));
+        return;
     }
     if (p > 0.0f)
     {
@@ -245,7 +251,7 @@ void InstrumentView::drawTypography (Graphics& g)
     // discreet hint
     g.setColour (chalk.withAlpha (0.30f));
     g.setFont (uiFont (11.0f).withExtraKerningFactor (0.15f));
-    g.drawText ("MOVE YOUR HAND TO THE ROD FOR PITCH  -  ABOVE THE LOOP FOR VOLUME  -  TOUCH THE DISPLAY FOR THE ENGINE",
+    g.drawText ("HOLD THE MOUSE AND MOVE  -  TOWARD THE ROD = HIGHER  -  UP = LOUDER  -  RELEASE = SILENCE  -  TOUCH THE DISPLAY FOR THE ENGINE",
                 Rectangle<float> (0, Art::H - 34.0f, Art::W, 16.0f), Justification::centred);
 
     // engraved knob legends on the front panel

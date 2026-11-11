@@ -64,7 +64,7 @@ target_sources(AetherVox PRIVATE
 # Artwork: physically rendered product shot + its "sketch" pass (see Tools/render)
 juce_add_binary_data(AetherVoxAssets SOURCES
     Assets/aethervox_render.jpg
-    Assets/aethervox_sketch.png)
+    Assets/aethervox_sketch.jpg)
 
 target_include_directories(AetherVox PRIVATE Source)
 

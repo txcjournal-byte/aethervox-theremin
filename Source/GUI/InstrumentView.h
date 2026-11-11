@@ -7,12 +7,11 @@
 //  * Opening sequence "sketch -> render": the instrument first appears as a
 //    chalk drawing (edges extracted from the same render), then the real
 //    render is wiped in left -> right with a 2 px red line on the wipe edge.
-//  * Play it like a real theremin, the mouse is your hand:
-//      above the cabinet, left/centre -> PITCH hand: distance to the vertical
-//                                        rod (closer = higher)
-//      above the loop (right)          -> VOLUME hand: height above the loop
-//                                        (closer = quieter)
-//    Hands stay where you leave them. Double-click above the loop = mute.
+//  * Play it like a theremin with the mouse: hold the button anywhere in the
+//    field and move -
+//      horizontal: distance to the vertical rod (closer = higher pitch)
+//      vertical:   height of the volume hand above the loop (higher = louder)
+//    Releasing the button lets the note fade out with the Release time.
 //  * While it sounds the field comes alive: radiating rings, beat waves
 //    between fingertip and antenna (density = pitch, height = volume),
 //    sparks, and a live waveform on the instrument's own display.
@@ -36,7 +35,7 @@ namespace Art
     // engraved wordmark under the display
     constexpr float wordX = 625.6f, wordY = 856.0f;
     // play zones
-    constexpr float zoneSplitX = 1060.0f, pitchFarX = 1000.0f, playTopY = 40.0f, playBotY = 690.0f;
+    constexpr float pitchFarX = 1480.0f, playTopY = 120.0f, playBotY = 700.0f;
 }
 
 class InstrumentView : public juce::Component
@@ -48,7 +47,6 @@ public:
     void mouseDown (const juce::MouseEvent&) override;
     void mouseDrag (const juce::MouseEvent&) override;
     void mouseUp   (const juce::MouseEvent&) override;
-    void mouseDoubleClick (const juce::MouseEvent&) override;
 
     void tick (float dtSeconds);
     std::function<void()> onDisplayClicked;
@@ -57,7 +55,7 @@ public:
     float getRevealX() const;
 
 private:
-    enum class Grab { None, Pitch, Volume };
+    enum class Grab { None, Play };
     void applyMouse (juce::Point<float>);
     void syncPad();
     static float rodXAt (float y);
@@ -73,7 +71,8 @@ private:
     void drawSparks (juce::Graphics&);
 
     AetherVoxProcessor& proc;
-    juce::Image render, sketch;
+    juce::Image render, sketch, renderScaled;
+    float renderScaledFor = 0.0f;
 
     float handPitch = 0.45f, handVolume = 0.0f, pitchY = 330.0f;
     Grab grab = Grab::None;
