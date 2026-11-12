@@ -1,0 +1,251 @@
+{%- liquid
+  assign p = product
+  if p == blank
+    assign p = all_products['alpine-theremin']
+  endif
+  assign vw = p.variants | where: 'title', 'Windows' | first
+  assign vm = p.variants | where: 'title', 'macOS' | first
+  assign price = p.price | money_without_trailing_zeros
+  assign cdn = 'https://cdn.shopify.com/s/files/1/1118/2489/6338/files/'
+-%}
+<style>
+  html body:has(.alp) .twp-pills{display:none!important}
+  html body:has(.alp) .header-wrapper:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h){background:#1f3a2c!important;border-bottom:1px solid rgba(243,234,216,.14)!important}
+  .alp{--snow:#1f3a2c;--ink:#f3ead8;--pine:#e2b65c;--red:#b8292f;--ochre:#e2b65c;--mute:rgba(243,234,216,.72);background:var(--snow);color:var(--ink);overflow-x:clip}
+  .alp *{box-sizing:border-box}
+  html body .alp .alp-d:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .alp .alp-d *:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Big Shoulders Display',Impact,sans-serif!important;text-transform:uppercase!important;letter-spacing:-.01em!important}
+  html body .alp .alp-t:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .alp .alp-t *:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Newsreader',Georgia,serif!important;text-transform:none!important;letter-spacing:normal!important}
+  .alp p{margin:0}
+
+  /* 1 · wordmark zoom */
+  .alp-hero{position:relative;height:260vh}
+  .alp-hero .stk{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+  .alp-hero .ph{position:absolute;inset:0}
+  .alp-hero .ph img{width:100%;height:100%;object-fit:cover;transform:scale(var(--pz,1.25))}
+  .alp-hero .cut{position:absolute;inset:0;display:grid;place-items:center;background:#1f3a2c;mix-blend-mode:multiply;opacity:var(--mo,1);pointer-events:none}
+  .alp-hero .cut span{display:block;font-family:'Big Shoulders Display',Impact,sans-serif;font-weight:900;text-transform:uppercase;font-size:min(30vw,52vh);line-height:.8;letter-spacing:-.01em;color:#fff;transform:translateY(-4%) scale(var(--mz,1));transform-origin:54% 52%;will-change:transform}
+  .alp-hero .sub{position:absolute;left:0;right:0;top:calc(50% + min(15vw,25vh) + 22px);text-align:center;opacity:var(--so,1);z-index:2}
+  html body .alp .alp-hero .sub p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:clamp(17px,1.5vw,21px)!important;color:var(--mute)!important;font-style:italic}
+  .alp-hero .after{position:absolute;left:0;right:0;bottom:clamp(28px,8vh,80px);text-align:center;color:#fff;opacity:var(--ao,0);transform:translateY(calc((1 - var(--ao,0)) * 24px));z-index:3;padding:0 20px}
+  .alp-hero .after::before{content:'';position:absolute;left:-20vw;right:-20vw;bottom:calc(-1 * clamp(28px,8vh,80px));height:60vh;background:linear-gradient(0deg,rgba(15,20,16,.6),transparent);z-index:-1}
+  html body .alp .alp-hero .after h1:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;color:#fff!important;font-weight:800!important;font-size:clamp(44px,7vw,110px)!important;line-height:.88!important}
+  html body .alp .alp-hero .after p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#f3efe6!important;font-size:clamp(17px,1.5vw,20px)!important;margin-top:12px!important}
+
+  /* 2 · she plays along (frame scrub) */
+  .alp-play{position:relative;height:420vh;background:#14100c}
+  .alp-play .stk{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:grid;place-items:center}
+  .alp-play canvas{position:absolute;inset:0;width:100%;height:100%}
+  .alp-play .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,10,7,.9) 0%,rgba(14,10,7,.62) 30%,rgba(14,10,7,0) 52%)}
+  .alp-play .cap{position:absolute;left:clamp(20px,5vw,72px);top:50%;transform:translateY(-50%);width:min(420px,40vw);color:#f3efe6}
+  .alp-play .step{position:absolute;left:0;top:0;transform:translateY(-50%);opacity:0;transition:opacity .45s ease,transform .45s ease}
+  .alp-play .step.on{opacity:1;transform:translateY(-50%) translateX(0)}
+  html body .alp .alp-play .step h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 14px!important;color:#fff!important;font-weight:800!important;font-size:clamp(40px,4.6vw,76px)!important;line-height:.9!important}
+  html body .alp .alp-play .step p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#e6dfd2!important;font-size:19px!important;line-height:1.5!important}
+  .alp-play .scale{position:absolute;right:clamp(16px,3vw,40px);top:14vh;bottom:14vh;width:58px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;color:rgba(243,239,230,.55)}
+  html body .alp .alp-play .scale span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:14px!important;font-weight:700!important;letter-spacing:.04em!important}
+  .alp-play .scale i{position:absolute;right:30px;top:0;bottom:0;width:2px;background:rgba(243,239,230,.18)}
+  .alp-play .scale b{position:absolute;right:24px;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--ochre);box-shadow:0 0 0 6px rgba(192,143,62,.25),0 0 24px var(--ochre);top:var(--py,100%)}
+
+  /* 3 · history pan */
+  .alp-hist{position:relative;height:380vh;background:var(--snow)}
+  .alp-hist .stk{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+  .alp-hist .head{padding:0 clamp(20px,5vw,72px);margin-bottom:4vh;display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
+  html body .alp .alp-hist .head h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;font-weight:900!important;font-size:clamp(48px,7vw,120px)!important;line-height:.85!important;color:var(--pine)!important}
+  html body .alp .alp-hist .head p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){max-width:38ch;color:var(--mute)!important;font-size:18px!important;line-height:1.5!important}
+  .alp-hist .track{display:flex;gap:clamp(16px,2vw,28px);padding:0 clamp(20px,5vw,72px);will-change:transform;transform:translateX(var(--tx,0px))}
+  .alp-hist figure{margin:0;flex:0 0 auto;width:clamp(300px,40vw,620px)}
+  .alp-hist figure:nth-child(even){margin-top:6vh}
+  .alp-hist .fr{aspect-ratio:4/3;overflow:hidden;border-radius:6px;background:#2a4a39}
+  .alp-hist .fr img{width:118%;height:100%;object-fit:cover;transform:translateX(var(--ix,-8%))}
+  html body .alp .alp-hist figcaption:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;gap:14px;align-items:baseline;margin-top:12px!important;color:var(--mute)!important;font-size:16px!important}
+  html body .alp .alp-hist figcaption b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Big Shoulders Display',Impact,sans-serif!important;font-weight:800!important;font-size:30px!important;color:var(--ochre)!important}
+
+  /* 4 · six knobs */
+  .alp-knobs{position:relative;padding:clamp(80px,12vh,140px) clamp(20px,5vw,72px);display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px);align-items:start;max-width:1500px;margin:0 auto}
+  .alp-knobs .vis{position:sticky;top:12vh}
+  .alp-knobs .vis img{width:100%;height:auto;border-radius:10px;box-shadow:0 30px 70px -24px rgba(30,25,15,.45)}
+  html body .alp .alp-knobs .vis p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin-top:16px!important;color:var(--mute)!important;font-size:17px!important;line-height:1.5!important}
+  .alp-knobs ol{list-style:none;margin:0;padding:0}
+  .alp-knobs li{padding:3vh 0 4vh;border-top:1px solid rgba(243,234,216,.16);opacity:.28;transition:opacity .4s ease}
+  .alp-knobs li.on{opacity:1}
+  html body .alp .alp-knobs li h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 8px!important;font-weight:900!important;font-size:clamp(56px,7vw,112px)!important;line-height:.85!important;color:var(--ink)!important}
+  html body .alp .alp-knobs li.on h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--ochre)!important}
+  html body .alp .alp-knobs li p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:19px!important;line-height:1.5!important;color:var(--ink)!important;max-width:40ch}
+
+  /* 5 · buy */
+  .alp-buy{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;color:#fff}
+  .alp-buy>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(var(--bz,1.15))}
+  .alp-buy::after{content:'';position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 55%,rgba(12,16,13,.55),rgba(12,16,13,.15))}
+  .alp-buy .in{position:relative;z-index:2;padding:0 20px}
+  html body .alp .alp-buy h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;color:#fff!important;font-weight:900!important;font-size:clamp(56px,10vw,170px)!important;line-height:.82!important}
+  html body .alp .alp-buy .pr:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:18px 0 30px!important;color:#f3efe6!important;font-size:20px!important}
+  .alp-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  html body .alp a.alp-b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .alp span.alp-b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:inline-flex;align-items:center;justify-content:center;min-width:230px;height:54px;padding:0 26px;border-radius:999px;font-family:'Newsreader',Georgia,serif!important;font-size:18px!important;font-weight:600!important;text-decoration:none!important}
+  html body .alp a.alp-b1:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:var(--red)!important;color:#fff!important}
+  html body .alp a.alp-b1:hover:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#8a1f23!important}
+  html body .alp .alp-b2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:rgba(255,255,255,.12)!important;color:#fff!important;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.65);backdrop-filter:blur(8px)}
+  .alp a.alp-b:focus-visible{outline:2px solid #fff;outline-offset:3px}
+  .alp-spec{max-width:1100px;margin:0 auto;padding:clamp(56px,9vh,100px) clamp(20px,5vw,72px);display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+  html body .alp .alp-spec h4:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 8px!important;font-weight:800!important;font-size:26px!important;color:var(--pine)!important}
+  html body .alp .alp-spec p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--mute)!important;font-size:16px!important;line-height:1.55!important}
+  html body .alp .alp-credit:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){text-align:center;color:rgba(243,234,216,.5)!important;font-size:13px!important;padding:0 20px 48px}
+
+  @media(max-width:800px){
+    .alp-play .shade{background:linear-gradient(0deg,rgba(14,10,7,.85) 0%,rgba(14,10,7,.2) 50%,rgba(14,10,7,0) 70%)}
+    .alp-play .cap{left:20px;right:20px;width:auto;top:auto;bottom:20vh;transform:none}
+    .alp-play .scale{display:none}
+    .alp-hist .head{flex-direction:column;align-items:flex-start}
+    .alp-knobs{grid-template-columns:1fr}.alp-knobs .vis{position:relative;top:0}
+    .alp-spec{grid-template-columns:1fr}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .alp-hero,.alp-play,.alp-hist{height:auto}
+    .alp-hero .stk,.alp-play .stk,.alp-hist .stk{position:relative;height:100svh}
+    .alp-play .step:first-child{opacity:1}
+    .alp-hist .track{overflow-x:auto;transform:none}
+    .alp-knobs li{opacity:1}
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+
+<div class="alp">
+  <section class="alp-hero" aria-label="Alpine Theremin">
+    <div class="stk">
+      <div class="ph"><img src="{{ cdn }}tyrol-1890-rosengarten.jpg" alt="Rosengarten mountains in Tyrol, photochrom print around 1890" fetchpriority="high"></div>
+      <div class="cut" aria-hidden="true"><span>Alpine</span></div>
+      <div class="sub alp-t"><p>Grandma’s theremin, from a wooden cottage in Tyrol.</p></div>
+      <div class="after">
+        <h1 class="alp-d">Alpine Theremin</h1>
+        <p class="alp-t">A 1929 theremin instrument. VST3, AU and standalone.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="alp-play" aria-label="She plays along">
+    <div class="stk">
+      <canvas aria-hidden="true"></canvas>
+      <div class="shade"></div>
+      <div class="cap">
+        <div class="step on"><h2 class="alp-d">She plays along</h2><p class="alp-t">Grandma is the interface. Every note you play moves her hands.</p></div>
+        <div class="step"><h2 class="alp-d">Higher note</h2><p class="alp-t">Her right hand glides up the antenna, from C1 to C7.</p></div>
+        <div class="step"><h2 class="alp-d">Louder</h2><p class="alp-t">Her left hand lifts over the loop and the tone swells.</p></div>
+        <div class="step"><h2 class="alp-d">Between phrases</h2><p class="alp-t">She closes her eyes and listens. Then plays on.</p></div>
+      </div>
+      <div class="scale alp-d" aria-hidden="true"><i></i><b></b><span>C7</span><span>C6</span><span>C5</span><span>C4</span><span>C3</span><span>C2</span><span>C1</span></div>
+    </div>
+  </section>
+
+  <section class="alp-hist" aria-label="History">
+    <div class="stk">
+      <div class="head"><h2 class="alp-d">From the valley</h2><p class="alp-t">Tyrol before the radio age. These photochrom prints were made around 1890. Thirty years later, a hand waving near an antenna would bend a radio tone.</p></div>
+      <div class="track">
+        <figure><div class="fr"><img src="{{ cdn }}tyrol-1890-village.jpg" alt="Tyrolean village" loading="lazy"></div><figcaption class="alp-t"><b>1890</b>A village below the peaks</figcaption></figure>
+        <figure><div class="fr"><img src="{{ cdn }}tyrol-1890-kals.jpg" alt="Kals in Tyrol" loading="lazy"></div><figcaption class="alp-t"><b>1890</b>Kals am Großglockner</figcaption></figure>
+        <figure><div class="fr"><img src="{{ cdn }}tyrol-1890-steinach.jpg" alt="Steinach am Brenner" loading="lazy"></div><figcaption class="alp-t"><b>1900</b>Steinach am Brenner</figcaption></figure>
+        <figure><div class="fr"><img src="{{ cdn }}tyrol-1890-sterzing.jpg" alt="Sterzing" loading="lazy"></div><figcaption class="alp-t"><b>1920</b>Léon Theremin plays the air</figcaption></figure>
+        <figure><div class="fr"><img src="{{ cdn }}tyrol-1890-plansee.jpg" alt="Plansee lake" loading="lazy"></div><figcaption class="alp-t"><b>1929</b>Grandma gets her cabinet</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="alp-knobs" aria-label="Six knobs">
+    <div class="vis"><img src="{{ cdn }}alpine-theremin-plugin.jpg" alt="Alpine Theremin plugin window" loading="lazy"><p class="alp-t">Six knobs on the cabinet. Nothing else to learn. Play with your mouse, or from MIDI.</p></div>
+    <ol class="alp-d">
+      <li><h3>Tune</h3><p class="alp-t">Sets where the antenna starts. Two real oscillators beat against each other, like inside a 1929 cabinet.</p></li>
+      <li><h3>Glide</h3><p class="alp-t">How slowly her hand travels between notes. From a crisp step to a long, ghostly slide.</p></li>
+      <li><h3>Vibrato</h3><p class="alp-t">The tremble of an old hand in the air.</p></li>
+      <li><h3>Warmth</h3><p class="alp-t">Tube drive, from clean to a soft amber growl.</p></li>
+      <li><h3>Reverb</h3><p class="alp-t">The wooden room around her. Pine walls, low ceiling.</p></li>
+      <li><h3>Volume</h3><p class="alp-t">The loop. Chords, a layer voice and a sub octave sit under it.</p></li>
+    </ol>
+  </section>
+
+  <section class="alp-buy" id="buy" aria-label="Buy">
+    <img src="{{ cdn }}tyrol-1890-karersee.jpg" alt="Karersee lake, photochrom print" loading="lazy">
+    <div class="in">
+      <h2 class="alp-d">Holla-di-ri-di-ooo</h2>
+      <p class="pr alp-t">{% if p.tags contains 'coming-soon' %}Coming soon. {{ price }}, once.{% else %}{{ price }}, once. Yours forever.{% endif %}</p>
+      <div class="alp-btns">
+        {%- if p.tags contains 'coming-soon' -%}<span class="alp-b alp-b2">Coming soon</span>{%- elsif vw -%}<a class="alp-b alp-b1" href="/cart/{{ vw.id }}:1">Buy for Windows</a>{%- endif -%}
+        {%- if vm and p.tags contains 'mac-ready' -%}<a class="alp-b alp-b2" href="/cart/{{ vm.id }}:1">Buy for Mac</a>{%- elsif p.tags contains 'coming-soon' -%}{%- else -%}<span class="alp-b alp-b2">Mac version soon</span>{%- endif -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="alp-spec alp-t">
+    <div><h4 class="alp-d">Formats</h4><p>VST3 and standalone on Windows 10 and 11. VST3, AU and standalone on macOS 11 or newer.</p></div>
+    <div><h4 class="alp-d">Works in</h4><p>FL Studio, Ableton Live, Logic Pro, Studio One, Reaper, Bitwig, Cubase.</p></div>
+    <div><h4 class="alp-d">License</h4><p>One-time purchase. No subscription, no iLok. Download right after checkout.</p></div>
+  </section>
+  <p class="alp-credit alp-t">Vintage photographs: photochrom prints of Tyrol, about 1890 to 1900, Library of Congress.</p>
+</div>
+
+<script>
+(function(){
+  var root=document.querySelector('.alp'); if(!root) return;
+  var RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cl=function(v,a,b){return Math.min(b,Math.max(a,v))}, seg=function(p,a,b){return cl((p-a)/(b-a),0,1)}, ease=function(t){return 1-Math.pow(1-t,3)};
+  function prog(el){var r=el.getBoundingClientRect(),t=r.height-innerHeight;return {p:cl(-r.top/t,0,1),r:r}}
+
+  // frames
+  var N=40, base='{{ cdn }}alp-s-', frames=[], cv=root.querySelector('.alp-play canvas'), cx=cv.getContext('2d'), last=-1;
+  for(var i=0;i<N;i++){var im=new Image();im.decoding='async';im.src=base+(i<10?'0':'')+i+'.jpg?width=1400';im.onload=function(){last=-1;req()};frames.push(im)}
+  function draw(idx){
+    var im=frames[idx]; if(!im||!im.complete||!im.naturalWidth){for(var k=idx;k>=0;k--){if(frames[k].complete&&frames[k].naturalWidth){im=frames[k];break}}}
+    if(!im||!im.naturalWidth) return;
+    var d=Math.min(devicePixelRatio||1,2), W=cv.clientWidth*d, H=cv.clientHeight*d;
+    if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
+    var s=Math.max(W/im.naturalWidth,H/im.naturalHeight), w=im.naturalWidth*s, h=im.naturalHeight*s;
+    var ox=(W-w)*(innerWidth>800?.78:.5);
+    cx.drawImage(im,ox,(H-h)/2,w,h);
+  }
+  var hero=root.querySelector('.alp-hero'), mask=hero.querySelector('.cut'), word=mask.querySelector('span');
+  var play=root.querySelector('.alp-play'), steps=[].slice.call(play.querySelectorAll('.step')), scale=play.querySelector('.scale');
+  var hist=root.querySelector('.alp-hist'), track=hist.querySelector('.track'), himgs=[].slice.call(hist.querySelectorAll('.fr img'));
+  var buy=root.querySelector('.alp-buy');
+
+  function origin(){}
+  function frame(){
+    ticking=false;
+    // hero: zoom through the letters
+    var h=prog(hero), a=h.p;
+    var z=ease(seg(a,.04,.5));
+    var mo=1-seg(a,.3,.44);
+    word.style.setProperty('--mz',(1+Math.pow(z,2)*5).toFixed(3));
+    mask.style.setProperty('--mo',mo.toFixed(3));
+    mask.style.visibility=mo<=0?'hidden':'';
+    hero.style.setProperty('--pz',(1.25-.25*z).toFixed(4));
+    hero.querySelector('.sub').style.setProperty('--so',(1-seg(a,.02,.15)).toFixed(3));
+    hero.style.setProperty('--ao',ease(seg(a,.5,.7)).toFixed(3));
+    // play: scrub frames + captions
+    var pl=prog(play), q=pl.p;
+    if(pl.r.top<innerHeight&&pl.r.bottom>0){
+      var idx=Math.round(cl(seg(q,.04,.92),0,1)*(N-1)); if(idx!==last){draw(idx);last=idx}
+      var si=q<.25?0:q<.55?1:q<.78?2:3; steps.forEach(function(s,i){s.classList.toggle('on',i===si)});
+      scale.style.setProperty('--py',(100-seg(q,.04,.92)*100).toFixed(2)+'%');
+    }
+    // history: horizontal pan
+    var hs=prog(hist), maxX=track.scrollWidth-innerWidth;
+    var x=-ease(seg(hs.p,.06,.94))*Math.max(0,maxX);
+    track.style.setProperty('--tx',x.toFixed(1)+'px');
+    himgs.forEach(function(im){var r=im.parentNode.getBoundingClientRect();var c=(r.left+r.width/2)/innerWidth;im.style.setProperty('--ix',(-8-(c-.5)*10).toFixed(2)+'%')});
+    // buy: slow push-in
+    var b=buy.getBoundingClientRect(), bp=cl(1-(b.top+b.height)/(innerHeight+b.height),0,1);
+    buy.style.setProperty('--bz',(1.15-.15*bp).toFixed(4));
+  }
+  var ticking=false; function req(){if(!ticking){ticking=true;requestAnimationFrame(frame)}}
+
+  // knobs list: highlight the one in view
+  var lis=[].slice.call(root.querySelectorAll('.alp-knobs li'));
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){lis.forEach(function(l){l.classList.toggle('on',l===e.target)})}})},{rootMargin:'-45% 0px -45% 0px'});lis.forEach(function(l){io.observe(l)})}else{lis.forEach(function(l){l.classList.add('on')})}
+
+  if(RM){draw(0);return}
+  addEventListener('scroll',req,{passive:true}); addEventListener('resize',function(){last=-1;origin();req()});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){origin();req()});
+  origin();
+  frame();
+})();
+</script>
+{% schema %}
+{"name":"TW Alpine Theremin","settings":[],"presets":[{"name":"TW Alpine Theremin"}]}
+{% endschema %}
