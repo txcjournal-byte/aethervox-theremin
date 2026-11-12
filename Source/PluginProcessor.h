@@ -89,6 +89,7 @@ private:
         std::atomic<float>* revSize; std::atomic<float>* revMix; std::atomic<float>* output;
         std::atomic<float>* mpe; std::atomic<float>* pbRange;
         std::atomic<float>* playMode; std::atomic<float>* layer; std::atomic<float>* sub;
+        std::atomic<float>* handPitch; std::atomic<float>* handVol;
     } raw {};
 
     // polyphonic voice allocation

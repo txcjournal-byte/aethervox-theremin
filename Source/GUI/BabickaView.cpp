@@ -80,7 +80,14 @@ void BabickaView::rescaleIfNeeded (float physicalScale)
 // =============================================================================
 //  Playing with the mouse: hold and move. Toward the rod = higher, up = louder.
 // =============================================================================
-void BabickaView::mouseDown (const MouseEvent& e) { playing = true; applyMouse (e.position); }
+void BabickaView::mouseDown (const MouseEvent& e)
+{
+    playing = true;
+    // tell the host a gesture starts, so FL / any DAW records the hand movement as automation
+    for (auto* id : { ParamIDs::handPitch, ParamIDs::handVol })
+        if (auto* prm = proc.apvts.getParameter (id)) prm->beginChangeGesture();
+    applyMouse (e.position);
+}
 void BabickaView::mouseDrag (const MouseEvent& e) { if (playing) applyMouse (e.position); }
 
 void BabickaView::mouseUp (const MouseEvent&)
@@ -88,6 +95,8 @@ void BabickaView::mouseUp (const MouseEvent&)
     playing = false;
     handVolume = 0.0f;
     syncPad();
+    for (auto* id : { ParamIDs::handPitch, ParamIDs::handVol })
+        if (auto* prm = proc.apvts.getParameter (id)) prm->endChangeGesture();
 }
 
 void BabickaView::applyMouse (Point<float> d)
@@ -103,6 +112,9 @@ void BabickaView::syncPad()
     proc.padPitch.store (handPitch);
     proc.padVolume.store (handVolume);
     proc.padActive.store (playing);
+    // mirror the hands into the automatable parameters (recorded by the host while it records)
+    if (auto* prm = proc.apvts.getParameter (ParamIDs::handPitch)) prm->setValueNotifyingHost (handPitch);
+    if (auto* prm = proc.apvts.getParameter (ParamIDs::handVol))   prm->setValueNotifyingHost (handVolume);
 }
 
 // =============================================================================

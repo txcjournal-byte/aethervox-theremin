@@ -19,7 +19,8 @@ AetherVoxProcessor::AetherVoxProcessor()
             get (morph), get (drive), get (brightness), get (formant), get (formantMix),
             get (vibDepth), get (vibRate), get (tremolo), get (humanize),
             get (delayTime), get (delayFb), get (delayMix), get (revSize), get (revMix), get (output),
-            get (mpe), get (pbRange), get (playMode), get (layer), get (sub) };
+            get (mpe), get (pbRange), get (playMode), get (layer), get (sub),
+            get (handPitch), get (handVol) };
 
     held.reserve (128);
 }
@@ -220,11 +221,16 @@ void AetherVoxProcessor::updateTargets()
     float timbre = -1.0f;
     Source src = Source::Idle;
 
-    if (padActive.load())
+    // hands: live mouse playing, or the host playing back recorded Hand Pitch / Hand Volume automation
+    const bool mouseHands = padActive.load();
+    const bool autoHands  = ! mouseHands && raw.handVol->load() > 0.0005f;
+    if (mouseHands || autoHands)
     {
-        // the mouse "hands" play voice 0 like a classic theremin; other voices fall silent
-        lastMidi = baseMidi + padPitch.load() * span;
-        engine.setVoiceTarget (0, lastMidi, shapeAmp (padVolume.load()));
+        // the "hands" play voice 0 like a classic theremin; other voices fall silent
+        const float hp = mouseHands ? padPitch.load()  : raw.handPitch->load();
+        const float hv = mouseHands ? padVolume.load() : raw.handVol->load();
+        lastMidi = baseMidi + hp * span;
+        engine.setVoiceTarget (0, lastMidi, shapeAmp (hv));
         for (int v = 1; v < av::ThereminEngine::maxVoices; ++v) engine.setVoiceTarget (v, lastMidi, 0.0f);
         engine.setLeadVoice (0);
         src = Source::Pad;

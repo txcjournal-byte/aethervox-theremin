@@ -45,6 +45,9 @@ namespace ParamIDs
     inline constexpr auto playMode    = "playMode";
     inline constexpr auto layer       = "layer";
     inline constexpr auto sub         = "sub";
+    // HANDS (mouse performance, automatable so the DAW can record it)
+    inline constexpr auto handPitch   = "handPitch";
+    inline constexpr auto handVol     = "handVol";
 }
 
 namespace Params
@@ -144,6 +147,10 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
                                                         StringArray { "Poly", "Mono" }, 0));
     addFloat (ParamIDs::layer, "Layer", { 0.0f, 1.0f }, 0.0f, pct);
     addFloat (ParamIDs::sub,   "Sub Octave", { 0.0f, 1.0f }, 0.0f, pct);
+
+    // HANDS: the mouse writes these, the host records them as automation and plays them back
+    addFloat (ParamIDs::handPitch, "Hand Pitch",  { 0.0f, 1.0f }, 0.5f, pct);
+    addFloat (ParamIDs::handVol,   "Hand Volume", { 0.0f, 1.0f }, 0.0f, pct);
 
     return layout;
 }
