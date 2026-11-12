@@ -1,0 +1,73 @@
+{%- liquid
+  assign cdn = 'https://cdn.shopify.com/s/files/1/1118/2489/6338/files/'
+  assign bg = section.settings.photo | default: 'tyrol-1890-karersee'
+  assign bgurl = cdn | append: bg | append: '.jpg?width=2000'
+-%}
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,600..800&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html body:has(.twpg):not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h):not(#i){background:#173229!important}
+  html body:has(.twpg) .tw-page-style,html body:has(.twpg) .twp-pills{display:none!important}
+  .twpg{position:relative;isolation:isolate;color:#f3f5f7;font-family:'Geist',system-ui,sans-serif}
+  .twpg *{box-sizing:border-box}
+  .twpg-bg{position:absolute;inset:0;z-index:-1;overflow:hidden}
+  .twpg-bg img{position:sticky;top:0;width:100%;height:100vh;height:100svh;object-fit:cover;display:block}
+  .twpg-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(23,50,41,.15) 0,rgba(23,50,41,.55) 46vh,rgba(23,50,41,.9) 90vh,#173229 100%)}
+  .twpg-hero{min-height:56vh;min-height:56svh;display:flex;align-items:flex-end;padding:140px clamp(20px,5vw,72px) 40px;max-width:1240px;margin:0 auto}
+  html body .twpg h1.twpg-t:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;font-family:'Archivo',system-ui,sans-serif!important;font-stretch:122%;font-weight:800!important;font-size:clamp(52px,11vw,150px)!important;line-height:.88!important;letter-spacing:-.04em!important;text-transform:uppercase!important;color:#f3f5f7!important;text-shadow:0 10px 40px rgba(10,30,24,.5)}
+  .twpg-body{max-width:1240px;margin:0 auto;padding:0 clamp(20px,5vw,72px) clamp(80px,14vh,140px);display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+  .twpg-card{padding:clamp(24px,4vw,44px);border-radius:16px;background:rgba(16,40,32,.62);-webkit-backdrop-filter:blur(20px) saturate(1.3);backdrop-filter:blur(20px) saturate(1.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 30px 60px -30px rgba(8,24,18,.7)}
+  .twpg-split{display:grid;grid-template-columns:1fr 1.2fr;gap:20px}
+  html body .twpg .twpg-rte:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .twpg .twpg-rte *:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Geist',system-ui,sans-serif!important;color:#e3efe7!important;text-transform:none!important;letter-spacing:normal!important;background:transparent!important;border-color:rgba(255,255,255,.14)!important}
+  html body .twpg .twpg-rte:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:18px!important;line-height:1.65!important;max-width:68ch}
+  html body .twpg .twpg-rte h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .twpg .twpg-rte h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .twpg .twpg-rte strong:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#fff!important;font-weight:600!important}
+  html body .twpg .twpg-rte h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:24px!important;line-height:1.25!important;margin:1.6em 0 .4em!important}
+  html body .twpg .twpg-rte h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:19px!important;margin:1.3em 0 .3em!important}
+  html body .twpg .twpg-rte a:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#ff8a55!important;text-underline-offset:3px}
+  .twpg-rte>*:first-child{margin-top:0!important}
+  .twpg-rte img{max-width:100%;height:auto;border-radius:10px}
+  .twpg-form{display:grid;gap:14px}
+  html body .twpg .twpg-form label:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;gap:6px;font-size:14px!important;font-weight:600!important;color:#cfe0d6!important;text-transform:none!important;letter-spacing:0!important}
+  html body .twpg .twpg-form input:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h),html body .twpg .twpg-form textarea:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h){width:100%;padding:14px 16px;border-radius:10px;border:0!important;background:rgba(255,255,255,.08)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)!important;color:#fff!important;font:16px/1.4 'Geist',system-ui,sans-serif!important;outline:none}
+  html body .twpg .twpg-form input:focus:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h),html body .twpg .twpg-form textarea:focus:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h){box-shadow:inset 0 0 0 2px #ff6a2b!important}
+  .twpg-form textarea{min-height:160px;resize:vertical}
+  html body .twpg button.twpg-send:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){justify-self:start;appearance:none;border:0;cursor:pointer;height:52px;padding:0 26px;border-radius:12px;background:#ff6a2b!important;color:#173229!important;font:600 16px 'Geist',system-ui,sans-serif!important;text-transform:none!important;letter-spacing:0!important;transition:transform .12s,background .15s}
+  html body .twpg button.twpg-send:hover:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#ff8048!important}
+  .twpg-send:active{transform:scale(.97)}
+  .twpg-ok{padding:14px 16px;border-radius:10px;background:rgba(255,106,43,.16);color:#ffd2bd;font-weight:600}
+  .twpg-err{padding:14px 16px;border-radius:10px;background:rgba(255,106,43,.16);color:#ffd2bd}
+  .twpg a:focus-visible,.twpg button:focus-visible{outline:2px solid #ff6a2b;outline-offset:3px}
+  @media(max-width:860px){.twpg-split{grid-template-columns:1fr}.twpg-hero{min-height:44svh;padding-top:120px}}
+</style>
+{% render 'tw-nav' %}
+<div class="twpg">
+  <div class="twpg-bg" aria-hidden="true"><img src="{{ bgurl }}" alt="" fetchpriority="high"></div>
+  <header class="twpg-hero"><h1 class="twpg-t">{{ page.title | default: section.settings.title }}</h1></header>
+  <div class="twpg-body">
+    {%- if section.settings.form -%}
+      <div class="twpg-split">
+        {%- if page.content != blank -%}<div class="twpg-card twpg-rte">{{ page.content }}</div>{%- endif -%}
+        <div class="twpg-card">
+          {%- form 'contact', class: 'twpg-form' -%}
+            {%- if form.posted_successfully? -%}<p class="twpg-ok" role="status">Message sent. We'll answer by email.</p>{%- endif -%}
+            {%- if form.errors -%}<div class="twpg-err" role="alert">{{ form.errors | default_errors }}</div>{%- endif -%}
+            <label>Name<input type="text" name="contact[name]" autocomplete="name" value="{{ form.name }}"></label>
+            <label>Email<input type="email" name="contact[email]" autocomplete="email" required value="{% if form.email != blank %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}"></label>
+            <label>Order number (optional)<input type="text" name="contact[order]" value="{{ form.order }}"></label>
+            <label>Message<textarea name="contact[body]" required>{{ form.body }}</textarea></label>
+            <button class="twpg-send" type="submit">Send message</button>
+          {%- endform -%}
+        </div>
+      </div>
+    {%- else -%}
+      <div class="twpg-card twpg-rte">{{ page.content }}</div>
+    {%- endif -%}
+  </div>
+</div>
+{% render 'tw-nav', mode: 'legal' %}
+{% schema %}
+{"name":"TW Page","settings":[
+  {"type":"checkbox","id":"form","label":"Contact form","default":false},
+  {"type":"text","id":"photo","label":"Photo file (without .jpg)","default":"tyrol-1890-karersee"},
+  {"type":"text","id":"title","label":"Fallback title"}
+]}
+{% endschema %}
