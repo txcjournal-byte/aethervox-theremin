@@ -33,9 +33,9 @@ BabickaView::BabickaView (AetherVoxProcessor& p) : proc (p)
 {
     base = loadResource ("base.jpg");
     // regions come from Tools/babicka/build_assets.py (regions.txt)
-    loadLayer (pitchLayer, "pitch", 25, "mask_pitch.png", { 189, 0, 367, 348 });
-    loadLayer (volLayer,   "vol",   13, "mask_vol.png",   { 604, 139, 327, 197 });
-    loadLayer (blinkLayer, "blink",  5, "mask_blink.png", { 503, 61, 114, 74 });
+    loadLayer (pitchLayer, "pitch", 25, "mask_pitch.png", { 274, 29, 297, 335 });
+    loadLayer (volLayer,   "vol",   13, "mask_vol.png",   { 664, 189, 207, 142 });
+    loadLayer (blinkLayer, "blink",  5, "mask_blink.png", { 519, 129, 92, 70 });
     setMouseCursor (MouseCursor::PointingHandCursor);
 }
 

@@ -52,9 +52,9 @@ vol   = sequence(vlo, base, 13)                                        # 13 fram
 blk   = [base] + sequence(base, blink, 5)[1:]                          # 5 frames
 
 masks = {
-    'pitch': diff_mask(pitch, (215, 5, 530, 322)),
-    'vol':   diff_mask(vol, (630, 165, 905, 310)),
-    'blink': box_mask((516, 74, 604, 122), 6),
+    'pitch': diff_mask(pitch, (300, 55, 545, 338)),
+    'vol':   diff_mask(vol, (690, 215, 845, 305)),
+    'blink': box_mask((530, 140, 600, 188), 5),
 }
 regions = {}
 for k, m in masks.items():

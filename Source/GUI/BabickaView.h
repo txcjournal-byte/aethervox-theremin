@@ -21,12 +21,12 @@ namespace Photo
 {
     constexpr float W = 1158.0f, H = 652.0f;
     constexpr float S = 1600.0f / W;                       // photo px -> design px
-    constexpr float rodX = 295.0f, rodTopY = 20.0f, rodBotY = 300.0f;
-    constexpr float loopCX = 872.0f, loopCY = 266.0f, loopRX = 80.0f, loopRY = 20.0f;
-    constexpr float knobY = 414.0f, capR = 17.0f;
-    constexpr float knobX[6] = { 369.0f, 441.0f, 514.0f, 587.5f, 660.0f, 732.5f };
-    constexpr float meterX0 = 523.0f, meterY0 = 341.0f, meterX1 = 579.0f, meterY1 = 369.0f;
-    constexpr float playFarX = 1120.0f;                    // far right = lowest pitch
+    constexpr float rodX = 343.0f, rodTopY = 95.0f, rodBotY = 318.0f;
+    constexpr float loopCX = 824.0f, loopCY = 296.0f, loopRX = 68.0f, loopRY = 14.0f;
+    constexpr float knobY = 416.0f, capR = 15.0f;
+    constexpr float knobX[6] = { 405.0f, 465.7f, 525.7f, 586.7f, 647.3f, 707.7f };
+    constexpr float meterX0 = 532.0f, meterY0 = 356.0f, meterX1 = 581.0f, meterY1 = 381.0f;
+    constexpr float playFarX = 1100.0f;                    // far right = lowest pitch
 }
 
 class BabickaView : public juce::Component
