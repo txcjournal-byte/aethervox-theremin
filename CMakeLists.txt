@@ -59,12 +59,57 @@ target_sources(AetherVox PRIVATE
     Source/PluginEditor.cpp
     Source/DSP/ThereminEngine.cpp
     Source/GUI/AetherLookAndFeel.cpp
-    Source/GUI/InstrumentView.cpp)
+    Source/GUI/BabickaView.cpp)
 
 # Artwork: physically rendered product shot + its "sketch" pass (see Tools/render)
 juce_add_binary_data(AetherVoxAssets SOURCES
-    Assets/aethervox_render.jpg
-    Assets/aethervox_sketch.jpg)
+    Assets/babicka/base.jpg
+    Assets/babicka/blink_00.jpg
+    Assets/babicka/blink_01.jpg
+    Assets/babicka/blink_02.jpg
+    Assets/babicka/blink_03.jpg
+    Assets/babicka/blink_04.jpg
+    Assets/babicka/mask_blink.png
+    Assets/babicka/mask_pitch.png
+    Assets/babicka/mask_vol.png
+    Assets/babicka/pitch_00.jpg
+    Assets/babicka/pitch_01.jpg
+    Assets/babicka/pitch_02.jpg
+    Assets/babicka/pitch_03.jpg
+    Assets/babicka/pitch_04.jpg
+    Assets/babicka/pitch_05.jpg
+    Assets/babicka/pitch_06.jpg
+    Assets/babicka/pitch_07.jpg
+    Assets/babicka/pitch_08.jpg
+    Assets/babicka/pitch_09.jpg
+    Assets/babicka/pitch_10.jpg
+    Assets/babicka/pitch_11.jpg
+    Assets/babicka/pitch_12.jpg
+    Assets/babicka/pitch_13.jpg
+    Assets/babicka/pitch_14.jpg
+    Assets/babicka/pitch_15.jpg
+    Assets/babicka/pitch_16.jpg
+    Assets/babicka/pitch_17.jpg
+    Assets/babicka/pitch_18.jpg
+    Assets/babicka/pitch_19.jpg
+    Assets/babicka/pitch_20.jpg
+    Assets/babicka/pitch_21.jpg
+    Assets/babicka/pitch_22.jpg
+    Assets/babicka/pitch_23.jpg
+    Assets/babicka/pitch_24.jpg
+    Assets/babicka/vol_00.jpg
+    Assets/babicka/vol_01.jpg
+    Assets/babicka/vol_02.jpg
+    Assets/babicka/vol_03.jpg
+    Assets/babicka/vol_04.jpg
+    Assets/babicka/vol_05.jpg
+    Assets/babicka/vol_06.jpg
+    Assets/babicka/vol_07.jpg
+    Assets/babicka/vol_08.jpg
+    Assets/babicka/vol_09.jpg
+    Assets/babicka/vol_10.jpg
+    Assets/babicka/vol_11.jpg
+    Assets/babicka/vol_12.jpg)
 
 target_include_directories(AetherVox PRIVATE Source)
 
