@@ -1,25 +1,24 @@
-# Builds AetherVox (Windows VST3 + Standalone, macOS VST3/AU + Standalone)
-# and publishes ready-to-install zips as a GitHub Release.
+# Alpine Theremin (TrapWin): Windows installer + signed & notarized macOS build,
+# published as a GitHub Release (shop downloads).
+# macOS signing uses the same secrets as VICE BOSS:
+#   MACOS_CERT_P12 (base64), MACOS_CERT_PASSWORD, [MACOS_SIGN_IDENTITY],
+#   APPLE_API_KEY_P8 + APPLE_API_KEY_ID + APPLE_API_ISSUER_ID   (or APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD)
 name: build
 on: [push, workflow_dispatch]
 permissions:
   contents: write
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -A x64
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test DSP
         run: ctest --test-dir build -C Release --output-on-failure
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
+      - name: Package
         shell: pwsh
         run: |
           $r = "build/AetherVox_artefacts/Release"
@@ -27,14 +26,87 @@ jobs:
           Copy-Item -Recurse "$r/VST3/Alpine Theremin.vst3" pkg/
           Copy-Item "$r/Standalone/Alpine Theremin.exe" pkg/
           Compress-Archive -Path pkg/* -DestinationPath AlpineTheremin-Windows.zip -Force
-      - name: Package (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          r="build/AetherVox_artefacts/Release"
-          mkdir -p pkg && cp -R "$r/VST3/Alpine Theremin.vst3" "$r/AU/Alpine Theremin.component" "$r/Standalone/Alpine Theremin.app" pkg/
-          (cd pkg && zip -qry ../AlpineTheremin-macOS.zip .)
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=1.0.${{ github.run_number }}" installer\AlpineTheremin_win.iss
+          Copy-Item installer/Output/*.exe .
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Alpine Theremin v1.0.${{ github.run_number }}
-          files: AlpineTheremin-*.zip
+          files: |
+            AlpineTheremin-Windows.zip
+            Alpine_Theremin_*_Windows.exe
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      - name: Build
+        run: cmake --build build --config Release -- -quiet
+      - name: Test DSP
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Sign & notarize
+        shell: bash
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          ART="build/AetherVox_artefacts/Release"
+          mkdir -p signed
+          for b in "$ART/VST3/Alpine Theremin.vst3" "$ART/AU/Alpine Theremin.component" "$ART/Standalone/Alpine Theremin.app"; do cp -R "$b" signed/; done
+          ZIP=AlpineTheremin-macOS.zip
+          if [ -z "$MACOS_CERT_P12" ]; then
+            echo "::warning::macOS NOT signed - signing secrets missing in this repo."
+            ditto -c -k --keepParent signed "$ZIP"; exit 0
+          fi
+          KC=build.keychain
+          echo "$MACOS_CERT_P12" | base64 --decode > cert.p12
+          security create-keychain -p ci "$KC"
+          security default-keychain -s "$KC"
+          security unlock-keychain -p ci "$KC"
+          security import cert.p12 -k "$KC" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          curl -fsSL -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer \
+            && security import DeveloperIDG2CA.cer -k "$KC" || true
+          security list-keychains -d user -s "$KC" login.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci "$KC"
+          if [ -z "$MACOS_SIGN_IDENTITY" ]; then
+            MACOS_SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KC" | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)
+          fi
+          [ -n "$MACOS_SIGN_IDENTITY" ] || { echo "::error::No Developer ID Application identity in the .p12"; exit 1; }
+          for b in signed/*; do codesign --force --deep --options runtime --timestamp -s "$MACOS_SIGN_IDENTITY" "$b"; done
+          ditto -c -k --keepParent signed "$ZIP"
+          if [ -n "$APPLE_API_KEY_P8" ]; then
+            P8="$APPLE_API_KEY_P8"
+            if ! printf '%s' "$P8" | grep -q -- '-----BEGIN'; then
+              DEC=$(printf '%s' "$P8" | tr -d ' \r\n\t' | base64 --decode 2>/dev/null || true)
+              if printf '%s' "$DEC" | grep -q -- '-----BEGIN'; then P8="$DEC"; fi
+            fi
+            B64=$(printf '%s' "$P8" | tr -d '\r' | sed -e 's/-----[A-Z ]*-----//g' | tr -d ' \n\t')
+            { echo "-----BEGIN PRIVATE KEY-----"; echo "$B64" | fold -w 64; echo "-----END PRIVATE KEY-----"; } > AuthKey.p8
+            APPLE_API_KEY_ID=$(printf '%s' "$APPLE_API_KEY_ID" | tr -d ' \r\n'); APPLE_API_ISSUER_ID=$(printf '%s' "$APPLE_API_ISSUER_ID" | tr -d ' \r\n')
+            NOTARY=(--key AuthKey.p8 --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID")
+          else
+            NOTARY=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
+          fi
+          xcrun notarytool submit "$ZIP" "${NOTARY[@]}" --wait --output-format json | tee notary.json
+          grep -q '"status" *: *"Accepted"' notary.json || { echo "::error::Notarization not accepted: $(cat notary.json)"; exit 1; }
+          rm -f AuthKey.p8
+          for b in signed/*; do xcrun stapler staple "$b"; xcrun stapler validate "$b"; codesign --verify --deep --strict "$b"; done
+          rm "$ZIP"
+          cp "installer/INSTALL - macOS.txt" signed/
+          ditto -c -k --keepParent signed "$ZIP"
+          echo "::notice::macOS signed ($MACOS_SIGN_IDENTITY), notarized and stapled"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Alpine Theremin v1.0.${{ github.run_number }}
+          files: AlpineTheremin-macOS.zip

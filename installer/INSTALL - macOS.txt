@@ -1,0 +1,10 @@
+Alpine Theremin – macOS (Apple Silicon + Intel), signed & notarized by Apple
+
+1. Unzip.
+2. Drag "Alpine Theremin.component" into   /Library/Audio/Plug-Ins/Components   (Logic, GarageBand)
+3. Drag "Alpine Theremin.vst3"      into   /Library/Audio/Plug-Ins/VST3         (FL Studio, Ableton, Cubase...)
+   (Finder > Go > Go to Folder... and paste the path)
+4. Optional: drag "Alpine Theremin.app" into Applications (standalone).
+5. Restart your DAW and rescan plugins (Logic: Plug-in Manager > Reset & Rescan).
+
+trapwin.com
