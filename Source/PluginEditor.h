@@ -31,8 +31,10 @@ private:
     juce::Component body;
     BabickaView view;
     std::array<PanelKnob, 6> panelKnobs;
+    DragMidiButton dragMidi;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> knobAttachments;
     juce::int64 lastTick = 0;
+    int dragRepaint = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AetherVoxEditor)
 };

@@ -223,7 +223,7 @@ void AetherVoxProcessor::updateTargets()
 
     // hands: live mouse playing, or the host playing back recorded Hand Pitch / Hand Volume automation
     const bool mouseHands = padActive.load();
-    const bool autoHands  = ! mouseHands && raw.handVol->load() > 0.0005f;
+    const bool autoHands  = ! mouseHands && hostPlaying.load() && raw.handVol->load() > 0.0005f;
     if (mouseHands || autoHands)
     {
         // the "hands" play voice 0 like a classic theremin; other voices fall silent
@@ -297,6 +297,15 @@ void AetherVoxProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     }
 
     engine.setParameters (readParams());
+
+    bool playingNow = false;
+    if (auto* ph = getPlayHead())
+        if (auto posInfo = ph->getPosition())
+        {
+            playingNow = posInfo->getIsPlaying();
+            if (auto b = posInfo->getBpm()) if (*b > 1.0) hostBpm.store (*b);
+        }
+    hostPlaying.store (playingNow);
 
     // sample-accurate MIDI: render the voice in segments between events
     int pos = 0;

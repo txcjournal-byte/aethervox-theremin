@@ -16,6 +16,7 @@
 // =============================================================================
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../PluginProcessor.h"
+#include "MidiTake.h"
 
 namespace Photo
 {
@@ -40,6 +41,8 @@ public:
     void mouseUp   (const juce::MouseEvent&) override;
 
     void tick (float dtSeconds);
+
+    MidiTake& getTake() { return take; }
 
     static constexpr int designW = 1600;
     static constexpr int designH = 901;
@@ -74,6 +77,8 @@ private:
     // mouse playing
     bool playing = false;
     float handPitch = 0.5f, handVolume = 0.0f;
+    MidiTake take;
+    void recordPoint();
 };
 
 /** A knob on the cabinet: the bakelite cap is part of the photo, this draws only

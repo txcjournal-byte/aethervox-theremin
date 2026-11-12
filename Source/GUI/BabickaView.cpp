@@ -95,6 +95,7 @@ void BabickaView::mouseUp (const MouseEvent&)
     playing = false;
     handVolume = 0.0f;
     syncPad();
+    take.release (Time::getMillisecondCounterHiRes() * 0.001);
     for (auto* id : { ParamIDs::handPitch, ParamIDs::handVol })
         if (auto* prm = proc.apvts.getParameter (id)) prm->endChangeGesture();
 }
@@ -105,6 +106,16 @@ void BabickaView::applyMouse (Point<float> d)
     handPitch  = jlimit (0.0f, 1.0f, 1.0f - (x - (Photo::rodX + 20.0f)) / (Photo::playFarX - Photo::rodX - 20.0f));
     handVolume = jlimit (0.0f, 1.0f, (Photo::H - 60.0f - y) / (Photo::H - 120.0f));
     syncPad();
+    recordPoint();
+}
+
+void BabickaView::recordPoint()
+{
+    // the same pitch the engine plays: field base + tuning + hand position over the sensitivity range
+    const float tune = proc.apvts.getRawParameterValue (ParamIDs::pitchTune)->load();
+    const float sens = proc.apvts.getRawParameterValue (ParamIDs::pitchSens)->load();
+    const float midi = Params::pitchFieldBaseMidi + tune + handPitch * sens * 12.0f;
+    take.add (Time::getMillisecondCounterHiRes() * 0.001, midi, handVolume);
 }
 
 void BabickaView::syncPad()
@@ -123,6 +134,7 @@ void BabickaView::syncPad()
 void BabickaView::tick (float dt)
 {
     t += dt;
+    if (playing) recordPoint();          // a held hand keeps the note going in the take
     fadeIn = jmin (1.0f, fadeIn + dt / 0.35f);
     shownVol = follow (shownVol, proc.dispVolume.load(), 18.0f, dt);
     shownHz  = proc.dispHz.load();

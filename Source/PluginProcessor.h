@@ -46,6 +46,10 @@ public:
     std::atomic<float> padPitch  { 0.5f };   // 0 = far from pitch antenna, 1 = touching
     std::atomic<float> padVolume { 0.0f };   // 0 = silent, 1 = full
 
+    /** Host transport (written by audio thread): recorded hand automation only sounds while the host plays. */
+    std::atomic<bool>   hostPlaying { false };
+    std::atomic<double> hostBpm     { 120.0 };
+
     enum class Source { Idle = 0, Pad, Midi, CC };
     /** Display state (written by audio thread). */
     std::atomic<float> dispHz        { 0.0f };

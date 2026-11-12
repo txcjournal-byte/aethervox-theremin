@@ -29,6 +29,17 @@ AetherVoxEditor::AetherVoxEditor (AetherVoxProcessor& p)
             k.setDoubleClickReturnValue (true, prm->convertFrom0to1 (prm->getDefaultValue()));
     }
 
+    // DRAG MIDI: what was played with the mouse, as notes for the piano roll
+    dragMidi.setBounds (36, designHeight - 84, 340, 52);
+    dragMidi.noteCount = [this] { return view.getTake().countNotes(); };
+    dragMidi.makeFile  = [this]
+    {
+        auto f = File::getSpecialLocation (File::tempDirectory).getChildFile ("Alpine Theremin take.mid");
+        if (! view.getTake().writeTo (f, proc.hostBpm.load())) f.deleteFile();
+        return f;
+    };
+    body.addAndMakeVisible (dragMidi);
+
     // default size: about half the screen width (fits inside the DAW), resizable from the corner
     int startW = 860;
     if (auto* d = Desktop::getInstance().getDisplays().getPrimaryDisplay())
@@ -55,6 +66,7 @@ void AetherVoxEditor::timerCallback()
     const float dt = jlimit (0.0f, 0.1f, (float) (now - lastTick) * 0.001f);
     lastTick = now;
     view.tick (dt);
+    if (++dragRepaint % 10 == 0) dragMidi.repaint();
 }
 
 void AetherVoxEditor::paint (Graphics& g) { g.fillAll (Colours::black); }
