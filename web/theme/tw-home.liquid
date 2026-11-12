@@ -1,0 +1,186 @@
+<style>
+  html body:has(.tg) .twp-pills{display:none!important}
+  .tg{--canvas:#173229;--surface:rgba(16,40,32,.52);--ink:#f3f5f7;--ink-soft:#cfe0d6;--acc:#ff6a2b;--acc-ink:#173229;--e2:0 24px 48px -18px rgba(8,24,18,.55),0 8px 16px -8px rgba(8,24,18,.4);--edge:inset 0 1px 0 rgba(255,255,255,.14);--ease:cubic-bezier(.23,1,.32,1);background:var(--canvas);color:var(--ink)}
+  .tg *{box-sizing:border-box}
+  html body .tg .tgt:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .tg .tgt *:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Geist',system-ui,sans-serif!important;text-transform:none!important;letter-spacing:normal!important}
+  html body .tg .tgd:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Archivo',system-ui,sans-serif!important;font-stretch:118%;font-weight:800!important;letter-spacing:-.03em!important;text-transform:uppercase!important}
+  .tg p{margin:0}
+  .tg-sec{position:relative;height:calc(var(--n,3) * 100vh + 100vh)}
+  .tg-stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:flex;align-items:center}
+  .tg-room{position:absolute;inset:0;z-index:0}
+  .tg-room img{position:absolute;inset:-4%;width:108%;height:108%;object-fit:cover;filter:blur(14px) saturate(1.05);opacity:0}
+  .tg-room img:first-child{opacity:1}
+  .tg-room::after{content:'';position:absolute;inset:0;background:radial-gradient(120% 100% at 50% 45%,rgba(10,30,24,.05),rgba(10,30,24,.45))}
+  .tg-grain{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .tg-rail{position:relative;z-index:2;display:flex;align-items:center;gap:clamp(40px,7vw,120px);padding:0 clamp(20px,9vw,140px);will-change:transform;transform:translate3d(var(--tx,0px),0,0)}
+  .tg-obj{position:relative;flex:0 0 auto;width:min(1040px,74vw,calc((100svh - 230px) * 1.56));opacity:var(--o,1);transform:scale(var(--s,1));transition:opacity .2s linear}
+  .tg-obj .gui{display:block;perspective:1600px}
+  .tg-obj .gui img{display:block;width:100%;height:auto;border-radius:10px;box-shadow:var(--e2),0 0 0 1px rgba(255,255,255,.06);transform:rotateY(var(--ry,0deg));transition:transform .18s var(--ease)}
+  .tg-label{position:absolute;left:clamp(-28px,-2vw,-12px);bottom:clamp(-44px,-4vh,-24px);z-index:3;display:grid;gap:10px;min-width:min(420px,80vw);padding:22px 24px 20px;border-radius:12px;background:var(--surface);-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);box-shadow:var(--e2),var(--edge)}
+  html body .tg .tg-name:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;font-size:clamp(34px,3.6vw,58px)!important;line-height:.94!important;color:var(--ink)!important}
+  html body .tg .tg-name a:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:inherit!important;text-decoration:none!important}
+  html body .tg .tg-schema:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:15px!important;line-height:1.5!important;color:var(--ink-soft)!important}
+  .tg-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+  html body .tg .tg-price:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:24px!important;font-weight:600!important;color:var(--ink)!important;margin-right:6px!important;font-variant-numeric:tabular-nums}
+  html body .tg a.tg-b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .tg span.tg-b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:inline-flex;align-items:center;gap:7px;height:44px;padding:0 16px;border-radius:10px;font-size:15px!important;font-weight:600!important;text-decoration:none!important;white-space:nowrap;transition:transform .12s var(--ease),background .15s}
+  html body .tg a.tg-buy:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:var(--acc)!important;color:var(--acc-ink)!important}
+  html body .tg a.tg-buy:hover:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#ff8048!important}
+  html body .tg a.tg-more:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:rgba(255,255,255,.1)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+  html body .tg span.tg-off:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:rgba(255,255,255,.06)!important;color:var(--ink-soft)!important}
+  .tg a.tg-b:active{transform:scale(.97)}
+  .tg-b svg{width:15px;height:15px;fill:currentColor}
+  .tg-plate{flex:0 0 auto;width:min(460px,80vw);display:grid;gap:14px;padding:30px 28px;border-radius:12px;background:var(--surface);-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);box-shadow:var(--e2),var(--edge)}
+  html body .tg .tg-plate h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;font-size:clamp(30px,3vw,44px)!important;line-height:.96!important;color:var(--ink)!important}
+  .tg-plate dl{margin:0;display:grid;gap:8px}
+  .tg-plate dl div{display:flex;justify-content:space-between;gap:16px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.12)}
+  html body .tg .tg-plate dt:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--ink-soft)!important;font-size:15px!important}
+  html body .tg .tg-plate dd:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;color:var(--ink)!important;font-size:15px!important;text-align:right}
+  .tg-index{position:absolute;z-index:4;left:50%;transform:translateX(-50%);bottom:clamp(18px,4vh,36px);display:flex;gap:6px;flex-wrap:wrap}
+  html body .tg .tg-index button:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){appearance:none;border:0;cursor:pointer;height:36px;padding:0 14px;border-radius:10px;background:rgba(16,40,32,.45)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:var(--ink-soft)!important;font-size:14px!important;font-weight:600!important;transition:background .15s,color .15s}
+  html body .tg .tg-index button[aria-current=true]:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:var(--acc)!important;color:var(--acc-ink)!important}
+  .tg a:focus-visible,.tg button:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+  @media(max-width:860px){
+    .tg-obj{width:86vw}
+    .tg-label{position:relative;left:0;bottom:0;margin-top:-28px;margin-left:12px;margin-right:12px;min-width:0}
+    .tg-rail{gap:28px;padding:0 7vw}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .tg-sec{height:auto}
+    .tg-stage{position:relative;height:auto;min-height:100svh;overflow-x:auto;scroll-snap-type:x proximity;padding:90px 0 60px}
+    .tg-rail{transform:none}
+    .tg-obj{scroll-snap-align:center}
+    .tg-room img{transition:none}
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,600..800&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+{%- liquid
+  assign cdn = 'https://cdn.shopify.com/s/files/1/1118/2489/6338/files/'
+  assign src = collection
+  if src == blank
+    assign src = collections['plugins']
+  endif
+  assign items = src.products
+-%}
+{% render 'tw-nav' %}
+<div class="tg tgt">
+  <section class="tg-sec" style="--n:{{ items.size | plus: 1 }}" aria-label="TrapWin plugins">
+    <div class="tg-stage">
+      <div class="tg-room" aria-hidden="true">
+        {%- for pr in items limit: 12 -%}
+          {%- liquid
+            assign world = pr.featured_image | image_url: width: 1400
+            case pr.handle
+              when 'trapwin-vice-boss'
+                assign world = cdn | append: 'vb-hero2.jpg?width=1400'
+              when 'alpine-theremin'
+                assign world = cdn | append: 'tyrol-1890-rosengarten.jpg?width=1400'
+            endcase
+          -%}
+          <img src="{{ world }}" alt="" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
+        {%- endfor -%}
+      </div>
+      <div class="tg-grain" aria-hidden="true"></div>
+      <nav class="tg-index" aria-label="Plugins">
+        {%- for pr in items limit: 12 -%}<button type="button" data-i="{{ forloop.index0 }}"{% if forloop.first %} aria-current="true"{% endif %}>{{ pr.title | split: ' - ' | first | remove: 'TrapWin ' }}</button>{%- endfor -%}
+      </nav>
+      <div class="tg-rail">
+        {%- for pr in items limit: 12 -%}
+          {%- liquid
+            assign kname = 'Effect'
+            if pr.tags contains 'Instrument'
+              assign kname = 'Instrument'
+            endif
+            assign gui = pr.featured_image | image_url: width: 1600
+            assign fact = ''
+            case pr.handle
+              when 'trapwin-vice-boss'
+                assign gui = cdn | append: 'vb-ui-garage.jpg?width=1600'
+                assign fact = '10 worlds. 120 knobs.'
+              when 'alpine-theremin'
+                assign gui = cdn | append: 'alpine-theremin-plugin.jpg?width=1600'
+                assign fact = '1929 theremin. 6 knobs.'
+            endcase
+            assign nm = pr.title | split: ' - ' | first | remove: 'TrapWin '
+            assign vw = pr.variants | where: 'title', 'Windows' | first
+            assign vm = pr.variants | where: 'title', 'macOS' | first
+            assign macok = false
+            if pr.tags contains 'mac-ready' or pr.handle == 'trapwin-vice-boss'
+              assign macok = true
+            endif
+          -%}
+          <article class="tg-obj">
+            <a class="gui" href="{{ pr.url }}" tabindex="-1" aria-hidden="true"><img src="{{ gui }}" alt="" loading="{% if forloop.index < 3 %}eager{% else %}lazy{% endif %}"></a>
+            <div class="tg-label">
+              <h2 class="tg-name tgd"><a href="{{ pr.url }}">{{ nm }}</a></h2>
+              <p class="tg-schema">{{ kname }}.{% if fact != '' %} {{ fact }}{% endif %} VST3, AU, standalone.</p>
+              <div class="tg-row">
+                <span class="tg-price">{{ pr.price | money_without_trailing_zeros }}</span>
+                {%- if pr.tags contains 'coming-soon' -%}<span class="tg-b tg-off">Coming soon</span>{%- else -%}
+                {%- if vw -%}<a class="tg-b tg-buy" href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}
+                {%- if vm and macok -%}<a class="tg-b tg-buy" href="/cart/{{ vm.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.5-1-2.5-3.7zM14.1 5.7c.6-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></svg>Mac</a>{%- elsif vm -%}<span class="tg-b tg-off">Mac soon</span>{%- endif -%}
+                {%- endif -%}
+                <a class="tg-b tg-more" href="{{ pr.url }}">Open</a>
+              </div>
+            </div>
+          </article>
+        {%- endfor -%}
+        <aside class="tg-plate">
+          <h2 class="tgd">Every plugin</h2>
+          <dl>
+            <div><dt>Formats</dt><dd>VST3, AU, standalone</dd></div>
+            <div><dt>Systems</dt><dd>Windows 10/11, macOS 11+</dd></div>
+            <div><dt>Price</dt><dd>One time, no subscription</dd></div>
+            <div><dt>Delivery</dt><dd>Download after checkout</dd></div>
+          </dl>
+          <div class="tg-row"><a class="tg-b tg-more" href="/collections/plugins">All plugins</a></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</div>
+{% render 'tw-nav', mode: 'legal' %}
+<script>
+(function(){
+  var S=document.querySelector('.tg-sec'); if(!S) return;
+  var rail=S.querySelector('.tg-rail'), objs=[].slice.call(S.querySelectorAll('.tg-obj')), rooms=[].slice.call(S.querySelectorAll('.tg-room img')), idx=[].slice.call(S.querySelectorAll('.tg-index button'));
+  var RM=matchMedia('(prefers-reduced-motion: reduce)').matches, tick=false, maxX=0, cur=-1;
+  var cl=function(v,a,b){return Math.min(b,Math.max(a,v))};
+  function measure(){maxX=Math.max(0,rail.scrollWidth-innerWidth)}
+  function progressFor(i){var o=objs[i];var x=o.offsetLeft+o.offsetWidth/2-innerWidth/2;return maxX?cl(x/maxX,0,1):0}
+  function setCur(i){if(i===cur)return;cur=i;idx.forEach(function(b,k){b.setAttribute('aria-current',k===i)})}
+  function frame(){
+    tick=false;
+    var r=S.getBoundingClientRect(), total=r.height-innerHeight, p=cl(-r.top/total,0,1);
+    var x=-p*maxX; rail.style.setProperty('--tx',x.toFixed(1)+'px');
+    var best=0,bd=1e9;
+    objs.forEach(function(o,i){
+      var c=o.offsetLeft+x+o.offsetWidth/2, d=(c-innerWidth/2)/innerWidth, ad=Math.abs(d);
+      if(ad<bd){bd=ad;best=i}
+      o.style.setProperty('--o',(1-cl(ad-.35,0,.5)*.9).toFixed(3));
+      o.style.setProperty('--s',(1-cl(ad,0,.8)*.06).toFixed(4));
+      var g=o.querySelector('.gui img'); if(g) g.style.setProperty('--ry',(cl(d,-1,1)*-14).toFixed(2)+'deg');
+      o._w=Math.max(0,1-ad*1.6);
+    });
+    var sum=0; objs.forEach(function(o){sum+=o._w});
+    rooms.forEach(function(m,i){var w=objs[i]?objs[i]._w:0; m.style.opacity=(sum>0?w/sum:(i===best?1:0)).toFixed(3)});
+    if(sum===0&&rooms.length){var li=Math.min(best,rooms.length-1);rooms.forEach(function(m,i){m.style.opacity=i===li?1:0})}
+    setCur(best);
+  }
+  function req(){if(!tick){tick=true;requestAnimationFrame(frame)}}
+  idx.forEach(function(b){b.addEventListener('click',function(){
+    var i=+b.dataset.i;
+    if(RM){objs[i].scrollIntoView({inline:'center',block:'nearest'});return}
+    var top=S.getBoundingClientRect().top+scrollY, total=S.offsetHeight-innerHeight;
+    scrollTo({top:top+progressFor(i)*total,behavior:'smooth'});
+  })});
+  if(RM){rooms.forEach(function(m,i){m.style.opacity=i===0?1:0});return}
+  addEventListener('scroll',req,{passive:true});
+  addEventListener('resize',function(){measure();req()});
+  addEventListener('load',function(){measure();req()});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){measure();req()});
+  measure();frame();
+})();
+</script>
+{% schema %}
+{"name":"TW Home","settings":[],"presets":[{"name":"TW Home"}]}
+{% endschema %}
