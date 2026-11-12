@@ -42,7 +42,7 @@ juce_add_plugin(AetherVox
     BUNDLE_ID                   com.trapwin.aethervox
     PLUGIN_MANUFACTURER_CODE    Aevx
     PLUGIN_CODE                 Aetv
-    PRODUCT_NAME                "AetherVox Theremin"
+    PRODUCT_NAME                "Alpine Theremin"
     FORMATS                     ${AETHERVOX_FORMATS}
     IS_SYNTH                    TRUE
     NEEDS_MIDI_INPUT            TRUE

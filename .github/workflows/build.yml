@@ -24,17 +24,17 @@ jobs:
         run: |
           $r = "build/AetherVox_artefacts/Release"
           New-Item -ItemType Directory -Force -Path pkg | Out-Null
-          Copy-Item -Recurse "$r/VST3/AetherVox Theremin.vst3" pkg/
-          Copy-Item "$r/Standalone/AetherVox Theremin.exe" pkg/
-          Compress-Archive -Path pkg/* -DestinationPath AetherVox-Windows.zip -Force
+          Copy-Item -Recurse "$r/VST3/Alpine Theremin.vst3" pkg/
+          Copy-Item "$r/Standalone/Alpine Theremin.exe" pkg/
+          Compress-Archive -Path pkg/* -DestinationPath AlpineTheremin-Windows.zip -Force
       - name: Package (macOS)
         if: runner.os == 'macOS'
         run: |
           r="build/AetherVox_artefacts/Release"
-          mkdir -p pkg && cp -R "$r/VST3/AetherVox Theremin.vst3" "$r/AU/AetherVox Theremin.component" "$r/Standalone/AetherVox Theremin.app" pkg/
-          (cd pkg && zip -qry ../AetherVox-macOS.zip .)
+          mkdir -p pkg && cp -R "$r/VST3/Alpine Theremin.vst3" "$r/AU/Alpine Theremin.component" "$r/Standalone/Alpine Theremin.app" pkg/
+          (cd pkg && zip -qry ../AlpineTheremin-macOS.zip .)
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: AetherVox Theremin v1.0.${{ github.run_number }}
-          files: AetherVox-*.zip
+          name: Alpine Theremin v1.0.${{ github.run_number }}
+          files: AlpineTheremin-*.zip

@@ -56,7 +56,6 @@ private:
     void drawLayer (juce::Graphics&, const Layer&, float pose) const;
     void drawGlow (juce::Graphics&);
     void drawMeter (juce::Graphics&);
-    void drawLegends (juce::Graphics&);
     void applyMouse (juce::Point<float> designPos);
     void syncPad();
 

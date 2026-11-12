@@ -9,7 +9,6 @@ namespace
     constexpr float kPi = MathConstants<float>::pi;
     const Colour amber { 0xffffb238 };
     const Colour cream { 0xfff6e7c4 };
-    const char* kNoteNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
     Image loadResource (const String& file)
     {
@@ -156,7 +155,6 @@ void BabickaView::paint (Graphics& g)
     if (blinkPose > 0.001f) drawLayer (g, blinkLayer, blinkPose);
     drawGlow (g);
     drawMeter (g);
-    drawLegends (g);
     if (fadeIn < 1.0f) g.endTransparencyLayer();
 }
 
@@ -226,36 +224,9 @@ void BabickaView::drawMeter (Graphics& g)
     g.setColour (Colour (0xff2a1203));
     g.drawLine ({ pivot, pivot.getPointOnCircumference (len * 0.9f, ang) }, 2.0f);
 
-    // note name in the lower corner of the glass
-    String note = "";
-    if (shownHz > 0.0f)
-    {
-        const int n = roundToInt (69.0f + 12.0f * std::log2 (shownHz / 440.0f));
-        note = String (kNoteNames[((n % 12) + 12) % 12]) + String (n / 12 - 1);
-    }
-    g.setColour (Colour (0xff2a1203).withAlpha (0.85f));
-    g.setFont (uiFont (13.0f, true));
-    g.drawText (note, r.reduced (5.0f, 2.0f), Justification::topLeft);
-
     // halo spilling onto the walnut
     g.setColour (amber.withAlpha (0.10f + 0.20f * needle));
     g.drawRoundedRectangle (r.expanded (3.0f), 8.0f, 4.0f);
-}
-
-void BabickaView::drawLegends (Graphics& g)
-{
-    // engraved brass-coloured legends above the knobs
-    const char* legends[6] = { "LADĚNÍ", "GLIDE", "VIBRATO", "TEPLO", "DOZVUK", "HLAS" };
-    g.setFont (uiFont (18.0f, true).withExtraKerningFactor (0.04f));
-    for (int i = 0; i < 6; ++i)
-    {
-        const auto c = toDesign (Photo::knobX[i], Photo::knobY - 33.0f);
-        const auto box = Rectangle<float> (c.x - 55.0f, c.y - 10.0f, 110.0f, 20.0f);
-        g.setColour (Colours::black.withAlpha (0.6f));
-        g.drawText (String::fromUTF8 (legends[i]), box.translated (1.0f, 1.0f), Justification::centred);
-        g.setColour (cream.withAlpha (0.95f));
-        g.drawText (String::fromUTF8 (legends[i]), box, Justification::centred);
-    }
 }
 
 // =============================================================================
@@ -279,13 +250,6 @@ void PanelKnob::paint (Graphics& g)
     const float prop = (float) valueToProportionOfLength (getValue());
     const float angle = rp.startAngleRadians + prop * (rp.endAngleRadians - rp.startAngleRadians);
 
-    if (isMouseOverOrDragging())
-    {
-        Path arc;
-        arc.addCentredArc (c.x, c.y, r * 1.55f, r * 1.55f, 0.0f, rp.startAngleRadians, angle, true);
-        g.setColour (amber.withAlpha (isMouseButtonDown() ? 0.95f : 0.65f));
-        g.strokePath (arc, PathStrokeType (3.0f, PathStrokeType::curved, PathStrokeType::rounded));
-    }
     const auto p1 = c.getPointOnCircumference (r * 0.25f, angle), p2 = c.getPointOnCircumference (r * 0.88f, angle);
     g.setColour (Colours::black.withAlpha (0.5f));
     g.drawLine ({ p1, p2 }, 4.0f);

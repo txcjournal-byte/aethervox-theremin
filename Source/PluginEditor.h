@@ -3,29 +3,12 @@
 #include "PluginProcessor.h"
 #include "GUI/AetherLookAndFeel.h"
 #include "GUI/BabickaView.h"
-#include "GUI/Controls.h"
-
-/** The row of settings under the photo, framed by a folk embroidery band. */
-class ControlStrip : public juce::Component
-{
-public:
-    explicit ControlStrip (juce::AudioProcessorValueTreeState& state);
-    void paint (juce::Graphics&) override;
-    void resized() override;
-
-private:
-    juce::Component* knob   (const char* id, const juce::String& caption);
-    juce::Component* choice (const char* id, const juce::String& caption, const juce::StringArray& shortNames = {});
-
-    juce::AudioProcessorValueTreeState& apvts;
-    std::vector<std::unique_ptr<juce::Component>> controls;
-    std::vector<juce::Component*> order;
-};
 
 /**
-    Babiččin Theremin: an animated photograph of a folk grandmother playing a
-    giant 1929 theremin, with the cabinet's six knobs as real controls and a
-    settings strip below. Drawn at 1600 x 1081 and scaled uniformly.
+    Alpine Theremin (TrapWin): the whole interface is one photograph - a folk
+    grandmother playing a giant 1929 theremin in her cottage. She is animated by
+    the music, and the six knobs on the cabinet are the only controls.
+    Drawn at 1600 x 901 and scaled uniformly.
 */
 class AetherVoxEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
@@ -36,9 +19,8 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    static constexpr int stripHeight  = 180;
     static constexpr int designWidth  = BabickaView::designW;
-    static constexpr int designHeight = BabickaView::designH + stripHeight;
+    static constexpr int designHeight = BabickaView::designH;
 
 private:
     void timerCallback() override;
@@ -50,8 +32,6 @@ private:
     BabickaView view;
     std::array<PanelKnob, 6> panelKnobs;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> knobAttachments;
-    ControlStrip strip;
-    juce::TooltipWindow tooltips { this, 500 };
     juce::int64 lastTick = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AetherVoxEditor)

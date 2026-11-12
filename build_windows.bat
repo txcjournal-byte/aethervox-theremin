@@ -52,8 +52,8 @@ echo [*] Kompilace Release...
 cmake --build build --config Release --target AetherVox_VST3 AetherVox_Standalone --parallel
 if errorlevel 1 ( echo [!] Kompilace selhala. & pause & exit /b 1 )
 
-set "VST3_OUT=%~dp0build\AetherVox_artefacts\Release\VST3\AetherVox Theremin.vst3"
-set "APP_OUT=%~dp0build\AetherVox_artefacts\Release\Standalone\AetherVox Theremin.exe"
+set "VST3_OUT=%~dp0build\AetherVox_artefacts\Release\VST3\Alpine Theremin.vst3"
+set "APP_OUT=%~dp0build\AetherVox_artefacts\Release\Standalone\Alpine Theremin.exe"
 
 rem ---------- 3) install for FL Studio ---------------------------------------
 echo.
@@ -62,11 +62,11 @@ powershell -NoProfile -Command "Start-Process powershell -Verb RunAs -Wait -Argu
 
 echo.
 echo  HOTOVO.
-echo   VST3:        %CommonProgramFiles%\VST3\AetherVox Theremin.vst3
+echo   VST3:        %CommonProgramFiles%\VST3\Alpine Theremin.vst3
 echo   Standalone:  %APP_OUT%
 echo.
 echo  FL Studio: Options ^> Manage plugins ^> Find more plugins, pak v Plugin
-echo  databazi najdi "AetherVox Theremin" ^(Generators^).
+echo  databazi najdi "Alpine Theremin" ^(Generators^).
 echo.
 start "" "%APP_OUT%"
 pause
