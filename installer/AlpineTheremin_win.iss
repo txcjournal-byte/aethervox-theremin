@@ -21,14 +21,18 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 PrivilegesRequired=admin
 WizardStyle=modern
+; close FL Studio / any host that holds the plugin open, and replace locked files on reboot as a last resort
+CloseApplications=force
+CloseApplicationsFilter=*.exe,*.dll,*.vst3
+RestartApplications=no
 
 [Components]
 Name: "vst3"; Description: "VST3 plugin (FL Studio, Ableton, Cubase, Studio One...)"; Types: full compact custom; Flags: fixed
 Name: "standalone"; Description: "Standalone app"; Types: full
 
 [Files]
-Source: "{#Art}\VST3\Alpine Theremin.vst3\*"; DestDir: "{commoncf64}\VST3\Alpine Theremin.vst3"; Components: vst3; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#Art}\Standalone\Alpine Theremin.exe"; DestDir: "{app}"; Components: standalone; Flags: ignoreversion
+Source: "{#Art}\VST3\Alpine Theremin.vst3\*"; DestDir: "{commoncf64}\VST3\Alpine Theremin.vst3"; Components: vst3; Flags: ignoreversion recursesubdirs createallsubdirs restartreplace uninsrestartdelete
+Source: "{#Art}\Standalone\Alpine Theremin.exe"; DestDir: "{app}"; Components: standalone; Flags: ignoreversion restartreplace
 
 [Icons]
 Name: "{commonprograms}\Alpine Theremin"; Filename: "{app}\Alpine Theremin.exe"; Components: standalone
