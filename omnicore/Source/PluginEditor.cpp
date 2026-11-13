@@ -12,6 +12,8 @@ namespace
     // eye geometry on the photo (1254 px)
     const Rectangle<float> eyeBox { 470.0f, 350.0f, 320.0f, 198.0f };
     const Rectangle<float> ledBox { 398.0f, 690.0f, 458.0f, 34.0f };
+    // a small LED window set into the metal frame under the keys: drag it into the piano roll
+    const Rectangle<float> dragBox { 492.0f, 990.0f, 270.0f, 34.0f };
 
     Path almond (Rectangle<float> e, float inset = 0.0f)
     {
@@ -280,7 +282,7 @@ void OmniEditor::mouseDown (const MouseEvent& e)
 {
     grabKeyboardFocus();
     const auto pp = toPhoto (e.position);
-    if (ledBox.contains (pp))
+    if (ledBox.contains (pp) || dragBox.contains (pp))
     {
         ledDrag = true;
         showLed (take.isEmpty() ? "PLAY FIRST" : "DRAG ME", take.isEmpty() ? "THEN DRAG THIS INTO THE PIANO ROLL"
@@ -334,7 +336,7 @@ void OmniEditor::mouseUp (const MouseEvent&) { ledDrag = false; dragging = false
 void OmniEditor::mouseMove (const MouseEvent& e)
 {
     const auto pp = toPhoto (e.position);
-    const bool overLed = ledBox.contains (pp);
+    const bool overLed = ledBox.contains (pp) || dragBox.contains (pp);
     setMouseCursor (overLed && ! take.isEmpty() ? MouseCursor::DraggingHandCursor : MouseCursor::NormalCursor);
     // hovering a key tells you what it does (and which computer key plays it)
     const int i = keyAt (pp);
@@ -413,7 +415,8 @@ void OmniEditor::releaseKeyboardChords (bool all)
 
 void OmniEditor::mouseDoubleClick (const MouseEvent& e)
 {
-    if (ledBox.contains (toPhoto (e.position))) { take.clear(); showLed ("MIDI TAKE", "CLEARED"); }
+    const auto pp = toPhoto (e.position);
+    if (ledBox.contains (pp) || dragBox.contains (pp)) { take.clear(); showLed ("MIDI TAKE", "CLEARED"); }
 }
 
 File OmniEditor::writeTake()
@@ -466,7 +469,7 @@ void OmniEditor::timerCallback()
     const bool msg = Time::getMillisecondCounterHiRes() < ledUntil;
     h = h * 131 + (msg ? led1.hashCode64() * 3 + led2.hashCode64() : proc.dispRoot.load() * 17 + proc.dispType.load());
     h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes();
-    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 300.0f })); }
+    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 360.0f })); }
 }
 
 void OmniEditor::paint (Graphics& g)
@@ -567,5 +570,16 @@ void OmniEditor::paint (Graphics& g)
         };
         draw (a, left.reduced (6.0f, 0.0f), big, Justification::centredLeft);
         draw (b, lr.reduced (6.0f, 0.0f), small, Justification::centredRight);
+
+        // DRAG MIDI window in the frame
+        const int n = take.countNotes();
+        g.setColour (Colour (0xff07090f));
+        g.fillRoundedRectangle (dragBox, 5.0f);
+        g.setColour (Colours::black.withAlpha (0.8f));
+        g.drawRoundedRectangle (dragBox.reduced (0.5f), 5.0f, 1.5f);
+        g.setColour (Colours::white.withAlpha (0.18f));
+        g.drawLine (dragBox.getX() + 4.0f, dragBox.getBottom() + 0.5f, dragBox.getRight() - 4.0f, dragBox.getBottom() + 0.5f, 1.0f);
+        const Font mid (FontOptions (Font::getDefaultMonospacedFontName(), 15.0f, Font::bold));
+        draw (n > 0 ? "DRAG MIDI >  " + String (n) + " NOTES" : "PLAY, THEN DRAG MIDI", dragBox, mid, Justification::centred);
     }
 }
