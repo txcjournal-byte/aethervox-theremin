@@ -47,9 +47,9 @@ OmniEditor::OmniEditor (OmniProcessor& p) : AudioProcessorEditor (p), proc (p)
     setResizable (true, true);
     getConstrainer()->setFixedAspectRatio (1.0);
     setResizeLimits (520, 520, 1254, 1254);
-    setSize (900, 900);
+    setSize (660, 660);
     setWantsKeyboardFocus (true);
-    startTimerHz (30);
+    startTimerHz (25);
     showLed ("OMNICORE 3000", OmniProcessor::presetName (proc.currentPreset.load()));
 }
 
@@ -142,10 +142,9 @@ void OmniEditor::toggleArp (bool forceOn)
         modeBeforeArp = mode;
         holdBeforeArp = proc.apvts.getRawParameterValue (PID::hold)->load() > 0.5f;
         setChoice (PID::mode, 3);
-        setHold (true);   // the arp keeps running after you let go; press the chord again to stop it
     }
     const int r = roundToInt (proc.apvts.getRawParameterValue (PID::arpRate)->load());
-    showLed ("ARP ON", String (Params::arpRateNames[r]) + "   PRESS CHORD AGAIN = STOP");
+    showLed ("ARP ON", String (Params::arpRateNames[r]) + "   V = OFF");
 }
 
 int OmniEditor::keyAt (Point<float> p) const
@@ -385,23 +384,31 @@ bool OmniEditor::keyPressed (const KeyPress& kp)
     return true;
 }
 
+void OmniEditor::focusLost (FocusChangeType) { releaseKeyboardChords (true); }
+
 bool OmniEditor::keyStateChanged (bool)
 {
-    bool any = false;
+    const bool had = ! kbHeld.empty();
+    releaseKeyboardChords (false);
+    return had;
+}
+
+/** Lets go of chords held on the computer keyboard once their key is up (or all of them). */
+void OmniEditor::releaseKeyboardChords (bool all)
+{
     for (auto it = kbHeld.begin(); it != kbHeld.end();)
     {
-        if (! KeyPress::isKeyCurrentlyDown (it->first))
+        if (all || ! KeyPress::isKeyCurrentlyDown (it->first))
         {
             if (it->second >= 0)
             {
                 const auto& k = keys[(size_t) it->second];
                 proc.keyboardState.noteOff (OmniProcessor::chordChannel, k.a * 12 + k.b, 0.0f);
             }
-            it = kbHeld.erase (it); any = true;
+            it = kbHeld.erase (it);
         }
         else ++it;
     }
-    return any;
 }
 
 void OmniEditor::mouseDoubleClick (const MouseEvent& e)
@@ -444,11 +451,22 @@ void OmniEditor::timerCallback()
     flash *= 0.9f;
     for (auto& gl : stringGlow) gl *= 0.86f;
 
+    if (! kbHeld.empty()) releaseKeyboardChords (false);   // key-up can be swallowed by the host
     for (size_t i = 0; i < keys.size(); ++i) litCache[i] = isLit (keys[i]);
-    // only the eye (with its glow) and the keyboard + LED change: repaint just those
+
+    // repaint only what changed: the eye while it moves or burns, the keyboard when a key / LED / string changes
     const auto c = eyeBox.getCentre();
-    repaint (toScreen ({ c.x - 340.0f, c.y - 240.0f, 680.0f, 480.0f }));
-    repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 300.0f }));
+    if (gaze.getDistanceFrom (gazeTarget) > 0.004f || pulse > 0.01f || flash > 0.01f || eyeWasLive)
+        repaint (toScreen ({ c.x - 340.0f, c.y - 240.0f, 680.0f, 480.0f }));
+    eyeWasLive = pulse > 0.01f || flash > 0.01f;
+
+    int64 h = downKey + 7;
+    for (size_t i = 0; i < litCache.size(); ++i) if (litCache[i]) h = h * 31 + (int64) i + 1;
+    for (auto gl : stringGlow) h = h * 7 + (int64) (gl * 20.0f);
+    const bool msg = Time::getMillisecondCounterHiRes() < ledUntil;
+    h = h * 131 + (msg ? led1.hashCode64() * 3 + led2.hashCode64() : proc.dispRoot.load() * 17 + proc.dispType.load());
+    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes();
+    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 300.0f })); }
 }
 
 void OmniEditor::paint (Graphics& g)

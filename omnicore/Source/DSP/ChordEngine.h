@@ -281,9 +281,10 @@ private:
         if (want == arpBassNote) return;
         if (arpBassNote >= 0) s.noteOff (arpBassNote);
         arpBassNote = want;
-        if (want >= 0) s.noteOn (want, vel);
+        if (want >= 0) s.noteOn (want, juce_bass_vel (vel) + 0.4f);
     }
     void releaseArpBass (OmniSynth& s) { if (arpBassNote >= 0) s.noteOff (arpBassNote); arpBassNote = -1; }
+    static float juce_bass_vel (float v) { return std::max (0.6f, v); }
 
     static double rateBeats (int r)
     {
@@ -307,7 +308,8 @@ private:
         }
         std::sort (v.begin(), v.end());
         v.erase (std::unique (v.begin(), v.end()), v.end());
-        if (set.bass) v.insert (v.begin(), (centre / 12 - 2) * 12 + pc);
+        // BASS: a strong root two octaves down + one octave down, so it is heard even on small speakers
+        if (set.bass) { v.insert (v.begin(), 36 + pc); v.insert (v.begin() + 1, 48 + pc); v.erase (std::unique (v.begin(), v.end()), v.end()); }
         return v;
     }
 
@@ -344,7 +346,7 @@ private:
                         schedule (t, note, true, vel * (0.75f + 0.25f * (k / 8.0f)));
                         schedule (t + (int64_t) (set.pluck * fs * 1.6), note, false, 0.0f);
                     }
-                if (set.bass) { const int b = 36 + pc; s.noteOn (b, vel * 0.8f); schedule (clock + (int64_t) (set.pluck * fs * 2.0), b, false, 0.0f); }
+                if (set.bass) for (int b : { 36 + pc, 48 + pc }) { s.noteOn (b, b < 48 ? 1.0f : vel * 0.8f); schedule (clock + (int64_t) (set.pluck * fs * 3.0), b, false, 0.0f); }
                 break;
             }
             case PlayMode::Arp:

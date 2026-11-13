@@ -34,6 +34,8 @@ public:
     void mouseUp (const juce::MouseEvent&) override;
     void mouseMove (const juce::MouseEvent&) override;
     void mouseExit (const juce::MouseEvent&) override;
+    void focusLost (FocusChangeType) override;
+    void releaseKeyboardChords (bool all);
     bool keyPressed (const juce::KeyPress&) override;
     bool keyStateChanged (bool isKeyDown) override;
     void mouseDoubleClick (const juce::MouseEvent&) override;
@@ -58,6 +60,8 @@ private:
     juce::String keyLetter (int idx) const;
     std::map<int, int> kbHeld;        // key code -> chord key index
     int hoverKey = -1;
+    juce::int64 lastPaintHash = 0;
+    bool eyeWasLive = true;
     int modeBeforeArp = 1; bool holdBeforeArp = false;
     void toggleArp (bool forceOn);
 

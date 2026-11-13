@@ -151,16 +151,13 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
     }
     if (pos < n) chords.render (synth, L + pos, R + pos, n - pos, bpm, ppq < 0.0 ? -1.0 : ppq + pos * beatsPerSample);
 
-    // --- what was played: MIDI out (hosts can record it) + the live take for DRAG MIDI
-    outMidi.clear();
+    // --- what was played -> the live take for DRAG MIDI
     {
         const double fs = getSampleRate();
         for (int i = 0; i < synth.logCount; ++i)
         {
             const auto& e = synth.noteLog[(size_t) i];
             const int off = (int) jlimit<int64_t> (0, n - 1, e.clock - clock0);
-            const auto vel = (uint8) jlimit (1, 127, roundToInt (e.vel * 127.0f));
-            outMidi.addEvent (e.on ? MidiMessage::noteOn (1, e.note, vel) : MidiMessage::noteOff (1, e.note), off);
             const auto scope = takeFifo.write (1);
             if (scope.blockSize1 > 0)
                 takeBuf[(size_t) scope.startIndex1] = { (double) (samplesSeen + off) / fs,
@@ -169,7 +166,7 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
         synth.logCount = 0;
     }
     samplesSeen += n;
-    midi.swapWith (outMidi);
+    midi.clear();
 
     if (buffer.getNumChannels() == 1) { FloatVectorOperations::add (L, R, n); FloatVectorOperations::multiply (L, 0.5f, n); }
     for (int c = 2; c < buffer.getNumChannels(); ++c) buffer.clear (c, 0, n);

@@ -29,7 +29,7 @@ public:
 
     const juce::String getName() const override { return "OmniCore 3000"; }
     bool acceptsMidi() const override { return true; }
-    bool producesMidi() const override { return true; }
+    bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 6.0; }
 
