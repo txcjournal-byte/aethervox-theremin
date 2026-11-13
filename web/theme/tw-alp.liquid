@@ -105,10 +105,27 @@
     .alp-hist .track{overflow-x:auto;transform:none}
     .alp-knobs li{opacity:1}
   }
+
+  /* buy bar: price, versions and cart always at hand */
+  .alp-bar{position:fixed;left:50%;bottom:clamp(12px,2.4vh,24px);z-index:55;transform:translate(-50%,0);display:flex;align-items:center;gap:10px;padding:8px 8px 8px 20px;border-radius:999px;background:rgba(20,40,30,.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 18px 40px -16px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.12);transition:opacity .3s ease,transform .3s ease;max-width:calc(100vw - 24px)}
+  .alp-bar.off{opacity:0;transform:translate(-50%,20px);pointer-events:none}
+  html body .alp .alp-bar b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:system-ui,sans-serif!important;font-size:18px!important;font-weight:700!important;color:#fff!important;white-space:nowrap;margin-right:4px}
+  html body .alp .alp-bar a:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .alp .alp-bar span.s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;font-family:system-ui,sans-serif!important;font-size:15px!important;font-weight:700!important;text-decoration:none!important;white-space:nowrap;background:#b8292f!important;color:#fff!important}
+  html body .alp .alp-bar a.m:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:rgba(255,255,255,.14)!important}
+  .alp-bar svg{width:18px;height:18px;fill:currentColor}
+  @media(max-width:560px){.alp-bar{gap:6px;padding:6px 6px 6px 14px} html body .alp .alp-bar a:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){padding:0 12px;font-size:14px!important}}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
 
 <div class="alp">
+  <div class="alp-bar" aria-label="Buy">
+    <b>{{ price }}</b>
+    {%- if p.tags contains 'coming-soon' -%}<span class="s">Coming soon</span>{%- else -%}
+    {%- if vw -%}<a href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}
+    {%- if vm and p.tags contains 'mac-ready' -%}<a class="m" href="/cart/{{ vm.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.5-1-2.5-3.7zM14.1 5.7c.6-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></svg>Mac</a>{%- endif -%}
+    {%- endif -%}
+  </div>
+
   <section class="alp-hero" aria-label="Alpine Theremin">
     <div class="stk">
       <div class="ph"><img src="{{ cdn }}tyrol-1890-rosengarten.jpg" alt="Rosengarten mountains in Tyrol, photochrom print around 1890" fetchpriority="high"></div>
@@ -245,6 +262,11 @@
   origin();
   frame();
 })();
+</script>
+
+<script>
+(function(){var b=document.querySelector('.alp-bar'),t=document.querySelector('#buy');if(!b||!t||!('IntersectionObserver' in window))return;
+new IntersectionObserver(function(es){es.forEach(function(e){b.classList.toggle('off',e.isIntersecting)})},{threshold:.25}).observe(t)})();
 </script>
 {% schema %}
 {"name":"TW Alpine Theremin","settings":[],"presets":[{"name":"TW Alpine Theremin"}]}
