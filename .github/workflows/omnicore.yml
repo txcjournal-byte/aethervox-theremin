@@ -1,0 +1,81 @@
+# OmniCore 3000 (TrapWin): Windows installer + signed & notarized macOS build -> GitHub Release
+name: omnicore
+on:
+  push:
+    paths: [ "omnicore/**", ".github/workflows/omnicore.yml" ]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults: { run: { working-directory: omnicore } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -B build -A x64
+      - run: cmake --build build --config Release --parallel
+      - run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package
+        shell: pwsh
+        run: |
+          $r = "build/OmniCore_artefacts/Release"
+          New-Item -ItemType Directory -Force -Path pkg | Out-Null
+          Copy-Item -Recurse "$r/VST3/OmniCore 3000.vst3" pkg/
+          Copy-Item "$r/Standalone/OmniCore 3000.exe" pkg/
+          Compress-Archive -Path pkg/* -DestinationPath OmniCore3000-Windows.zip -Force
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=1.0.${{ github.run_number }}" installer\OmniCore_win.iss
+          Copy-Item installer/Output/*.exe .
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: omnicore-v1.0.${{ github.run_number }}
+          name: OmniCore 3000 v1.0.${{ github.run_number }}
+          files: |
+            omnicore/OmniCore3000-Windows.zip
+            omnicore/OmniCore_3000_*_Windows.exe
+
+  macos:
+    runs-on: macos-latest
+    defaults: { run: { working-directory: omnicore } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      - run: cmake --build build --config Release -- -quiet
+      - run: ctest --test-dir build -C Release --output-on-failure
+      - name: Sign & notarize
+        shell: bash
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          ART="build/OmniCore_artefacts/Release"
+          mkdir -p signed
+          for b in "$ART/VST3/OmniCore 3000.vst3" "$ART/AU/OmniCore 3000.component" "$ART/Standalone/OmniCore 3000.app"; do cp -R "$b" signed/; done
+          ZIP=OmniCore3000-macOS.zip
+          if [ -z "$MACOS_CERT_P12" ]; then echo "::warning::macOS NOT signed"; ditto -c -k --keepParent signed "$ZIP"; exit 0; fi
+          KC=build.keychain
+          echo "$MACOS_CERT_P12" | base64 --decode > cert.p12
+          security create-keychain -p ci "$KC"; security default-keychain -s "$KC"; security unlock-keychain -p ci "$KC"
+          security import cert.p12 -k "$KC" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          curl -fsSL -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer && security import DeveloperIDG2CA.cer -k "$KC" || true
+          security list-keychains -d user -s "$KC" login.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci "$KC"
+          if [ -z "$MACOS_SIGN_IDENTITY" ]; then
+            MACOS_SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KC" | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)
+          fi
+          for b in signed/*; do codesign --force --deep --options runtime --timestamp -s "$MACOS_SIGN_IDENTITY" "$b"; done
+          ditto -c -k --keepParent signed "$ZIP"
+          xcrun notarytool submit "$ZIP" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait --output-format json | tee notary.json
+          grep -q '"status" *: *"Accepted"' notary.json || { echo "::error::Notarization not accepted: $(cat notary.json)"; exit 1; }
+          for b in signed/*; do xcrun stapler staple "$b"; codesign --verify --deep --strict "$b"; done
+          rm "$ZIP"; ditto -c -k --keepParent signed "$ZIP"
+          echo "::notice::macOS signed, notarized and stapled"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: omnicore-v1.0.${{ github.run_number }}
+          name: OmniCore 3000 v1.0.${{ github.run_number }}
+          files: omnicore/OmniCore3000-macOS.zip
