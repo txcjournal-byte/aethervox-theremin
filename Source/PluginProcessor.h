@@ -99,9 +99,10 @@ private:
     } raw {};
 
     // polyphonic voice allocation
-    struct Slot { int note = -1, channel = 1; float velocity = 0.0f; bool on = false; uint32_t age = 0; };
+    struct Slot { int note = -1, channel = 1; float velocity = 0.0f; bool on = false; uint32_t age = 0; juce::uint64 offTime = 0; };
     std::array<Slot, av::ThereminEngine::maxVoices> slots {};
     uint32_t noteCounter = 0;
+    juce::uint64 sampleClock = 0, eventTime = 0;   // for legato detection (sample time of the current MIDI event)
     void polyNoteOn (int note, int channel, float velocity);
     void polyNoteOff (int note, int channel);
     float noteMidi (int note, int channel, bool mpe, float tune, float pbRange) const;

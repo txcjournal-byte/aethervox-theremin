@@ -28,85 +28,39 @@ public:
     bool isEmpty() const { return buildPhrases().empty(); }
     void clear() { points.clear(); }
 
-    int countNotes() const { return (int) buildPhrases().size(); }
+    int countNotes() const { return (int) buildNotes().size(); }
 
-    /** Writes the take as a one-track MIDI file that replays the live playing 1:1:
-        one note per phrase (re-struck only for very wide slides) + 14-bit pitch bend
-        for every slide and wobble + CC11 expression for the hand volume.
-        Pitch bend range is announced with RPN 0 (and the plugin defaults to it). */
+    /** Writes the take as plain MIDI notes that FL's piano roll keeps:
+        the live melody becomes a legato line of notes that follows every slide
+        semitone by semitone. Alpine plays back-to-back notes legato on the same
+        voice, so with Glide the line slides exactly like the live playing. */
     bool writeTo (const juce::File& file, double bpm) const
     {
-        const auto phrases = buildPhrases();
-        if (phrases.empty()) return false;
+        if (buildPhrases().empty()) return false;
 
         constexpr int ppq = 960;
         const double tempoBpm = juce::jlimit (20.0, 400.0, bpm);
         const double ticksPerSec = ppq * tempoBpm / 60.0;
-        auto tick = [&] (double t) { return (t - start) * ticksPerSec; };
+        auto tick = [&] (double t) { return juce::jmax (0.0, std::round ((t - start) * ticksPerSec)); };
 
         juce::MidiMessageSequence seq;
-        auto add = [&] (juce::MidiMessage m, double ticks) { m.setTimeStamp (juce::jmax (0.0, ticks)); seq.addEvent (m); };
-
+        auto add = [&] (juce::MidiMessage m, double ticks) { m.setTimeStamp (ticks); seq.addEvent (m); };
         add (juce::MidiMessage::tempoMetaEvent (juce::roundToInt (60000000.0 / tempoBpm)), 0);
         add (juce::MidiMessage::textMetaEvent (3, "Alpine Theremin live take"), 0);
-        // RPN 0: pitch bend sensitivity = bendRange semitones
-        add (juce::MidiMessage::controllerEvent (1, 101, 0), 0);
-        add (juce::MidiMessage::controllerEvent (1, 100, 0), 0);
-        add (juce::MidiMessage::controllerEvent (1, 6, bendRange), 0);
-        add (juce::MidiMessage::controllerEvent (1, 38, 0), 0);
-        add (juce::MidiMessage::controllerEvent (1, 101, 127), 0);
-        add (juce::MidiMessage::controllerEvent (1, 100, 127), 0);
 
-        auto bendValue = [] (float semis)
+        auto vel = [] (float v) { return (juce::uint8) juce::jlimit (30, 127, juce::roundToInt (35.0f + v * 92.0f)); };
+
+        for (const auto& nt : buildNotes())
         {
-            const float v = juce::jlimit (-1.0f, 1.0f, semis / (float) bendRange);
-            return juce::jlimit (0, 16383, 8192 + juce::roundToInt (v * (v >= 0 ? 8191.0f : 8192.0f)));
-        };
-
-        for (const auto& ph : phrases)
-        {
-            int base = juce::jlimit (0, 127, (int) std::lround (points[(size_t) ph.first].pitch));
-            const double t0 = points[(size_t) ph.first].t;
-            // bend + expression first, so the note starts exactly where the hand was
-            add (juce::MidiMessage::pitchWheel (1, bendValue (points[(size_t) ph.first].pitch - (float) base)), tick (t0) - 1);
-            add (juce::MidiMessage::controllerEvent (1, 11, juce::jlimit (1, 127, juce::roundToInt (points[(size_t) ph.first].vol * 127.0f))), tick (t0) - 1);
-            add (juce::MidiMessage::noteOn (1, base, (juce::uint8) 127), tick (t0));
-
-            double lastT = t0; int lastBend = -1, lastCc = -1;
-            for (int i = ph.first; i <= ph.last; ++i)
-            {
-                const auto& pt = points[(size_t) i];
-                if (std::fabs (pt.pitch - (float) base) > (float) bendRange - 1.0f)
-                {
-                    // very wide slide: re-strike legato on a new base note, bend continues seamlessly
-                    add (juce::MidiMessage::noteOff (1, base), tick (pt.t));
-                    base = juce::jlimit (0, 127, (int) std::lround (pt.pitch));
-                    add (juce::MidiMessage::pitchWheel (1, bendValue (pt.pitch - (float) base)), tick (pt.t));
-                    add (juce::MidiMessage::noteOn (1, base, (juce::uint8) 127), tick (pt.t) + 0.5);
-                    lastBend = -1;
-                }
-                if (pt.t - lastT < 0.006 && i != ph.last) continue;   // ~166 points / s is plenty
-                lastT = pt.t;
-                const int b = bendValue (pt.pitch - (float) base);
-                if (b != lastBend) { add (juce::MidiMessage::pitchWheel (1, b), tick (pt.t)); lastBend = b; }
-                const int c = juce::jlimit (1, 127, juce::roundToInt (pt.vol * 127.0f));
-                if (c != lastCc) { add (juce::MidiMessage::controllerEvent (1, 11, c), tick (pt.t)); lastCc = c; }
-            }
-            const double tEnd = juce::jmax (points[(size_t) ph.last].t, t0 + 0.03);
-            add (juce::MidiMessage::noteOff (1, base), tick (tEnd));
+            add (juce::MidiMessage::noteOn  (1, nt.note, vel (nt.vol)), tick (nt.on));
+            add (juce::MidiMessage::noteOff (1, nt.note), juce::jmax (tick (nt.on) + 1.0, tick (nt.off)));
         }
-        // leave the channel clean for whatever comes next
-        const double tail = tick (points.back().t) + ppq / 8.0;
-        add (juce::MidiMessage::pitchWheel (1, 8192), tail);
-        add (juce::MidiMessage::controllerEvent (1, 11, 127), tail);
 
         seq.updateMatchedPairs();
         seq.sort();
-
         juce::MidiFile mf;
         mf.setTicksPerQuarterNote (ppq);
         mf.addTrack (seq);
-
         file.deleteFile();
         juce::FileOutputStream out (file);
         if (! out.openedOk()) return false;
@@ -114,7 +68,6 @@ public:
         return true;
     }
 
-    static constexpr int bendRange = 12;   // semitones, matches the plugin's default Pitch Bend Range
 
 private:
     struct Point { double t; float pitch, vol; };
@@ -125,6 +78,33 @@ private:
 
     std::vector<Point> points;
     double start = 0.0;
+
+    struct Note { int note; float vol; double on, off; };
+
+    /** The live line as back-to-back notes: a new note each time the hand clearly
+        reaches the next semitone (hysteresis), so every slide shows up as notes. */
+    std::vector<Note> buildNotes() const
+    {
+        std::vector<Note> out;
+        for (const auto& ph : buildPhrases())
+        {
+            const auto& p0 = points[(size_t) ph.first];
+            Note cur { juce::jlimit (0, 127, (int) std::lround (p0.pitch)), p0.vol, p0.t, p0.t };
+            for (int i = ph.first + 1; i <= ph.last; ++i)
+            {
+                const auto& pt = points[(size_t) i];
+                cur.off = pt.t;
+                if (std::fabs (pt.pitch - (float) cur.note) < 0.62f) continue;
+                const int next = juce::jlimit (0, 127, (int) std::lround (pt.pitch));
+                if (next == cur.note || pt.t - cur.on < 0.004) continue;
+                out.push_back (cur);
+                cur = { next, pt.vol, pt.t, pt.t };
+            }
+            cur.off = juce::jmax (cur.off, cur.on + 0.03);
+            out.push_back (cur);
+        }
+        return out;
+    }
 
     struct Phrase { int first, last; };
 
@@ -163,7 +143,7 @@ public:
         g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
         g.setColour (juce::Colour (n > 0 ? 0xff1f3a2c : 0xffe6dccb));
         g.setFont (juce::FontOptions (r.getHeight() * 0.42f, juce::Font::bold));
-        g.drawText (n > 0 ? "DRAG MIDI  (" + juce::String (n) + (n == 1 ? " phrase)" : " phrases)") : "PLAY, THEN DRAG MIDI",
+        g.drawText (n > 0 ? "DRAG MIDI  (" + juce::String (n) + " notes)" : "PLAY, THEN DRAG MIDI",
                     getLocalBounds(), juce::Justification::centred);
     }
 

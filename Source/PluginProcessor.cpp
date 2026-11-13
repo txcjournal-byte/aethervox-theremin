@@ -171,6 +171,21 @@ void AetherVoxProcessor::polyNoteOn (int note, int channel, float velocity)
     for (int i = 0; i < (int) slots.size(); ++i)
         if (slots[(size_t) i].note == note && slots[(size_t) i].channel == channel) { best = i; break; }
 
+    // legato: a note that starts right where another just ended (back-to-back notes, e.g. a
+    // DRAG MIDI take or a played slide) continues on that voice, so it glides instead of re-striking
+    if (best < 0)
+    {
+        const juce::uint64 window = (juce::uint64) (getSampleRate() * 0.03);
+        juce::uint64 newestOff = 0;
+        for (int i = 0; i < (int) slots.size(); ++i)
+        {
+            const auto& sl = slots[(size_t) i];
+            if (! sl.on && sl.note >= 0 && eventTime >= sl.offTime && eventTime - sl.offTime <= window
+                && engine.getVoiceEnvelope (i) > 1.0e-3f && sl.offTime >= newestOff)
+            { newestOff = sl.offTime; best = i; }
+        }
+    }
+
     // otherwise the quietest free voice, otherwise steal the oldest held one
     if (best < 0)
     {
@@ -190,7 +205,7 @@ void AetherVoxProcessor::polyNoteOn (int note, int channel, float velocity)
 void AetherVoxProcessor::polyNoteOff (int note, int channel)
 {
     for (auto& sl : slots)
-        if (sl.on && sl.note == note && sl.channel == channel) sl.on = false;
+        if (sl.on && sl.note == note && sl.channel == channel) { sl.on = false; sl.offTime = eventTime; }
 }
 
 float AetherVoxProcessor::noteMidi (int note, int channel, bool mpe, float tune, float pbRange) const
@@ -322,6 +337,7 @@ void AetherVoxProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             engine.renderVoice (mono.data() + pos, ev - pos);
             pos = ev;
         }
+        eventTime = sampleClock + (juce::uint64) ev;
         handleMidi (meta.getMessage());
     }
     if (pos < n)
@@ -329,6 +345,7 @@ void AetherVoxProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         updateTargets();
         engine.renderVoice (mono.data() + pos, n - pos);
     }
+    sampleClock += (juce::uint64) n;
 
     float* L = buffer.getWritePointer (0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer (1) : scratchR.data();
