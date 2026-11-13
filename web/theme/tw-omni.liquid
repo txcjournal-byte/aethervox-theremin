@@ -133,7 +133,7 @@
 
 <div class="omx">
   <div class="om-bar" aria-label="Buy">
-    {%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'similar hardware' -%}
+    {%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '19 990 Kč', label: 'similar hardware' -%}
     <b>{{ price }}</b>
     {%- if p.tags contains 'coming-soon' -%}<span class="s">Coming soon</span>{%- else -%}
     {%- if vw -%}<a href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}
@@ -215,7 +215,7 @@
     <img src="{{ cdn }}omnicore-hero.jpg?width=1800" alt="" loading="lazy">
     <div class="in">
       <h2 class="omd">Open the eye</h2>
-      <p class="pr omt twc-big">{% render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'similar hardware' %}<br>OmniCore 3000: <b>{{ price }}</b>, once. Yours forever.</p>
+      <p class="pr omt twc-big">{% render 'tw-compare', usd: '$999', eur: '799 €', czk: '19 990 Kč', label: 'similar hardware' %}<br>OmniCore 3000: <b>{{ price }}</b>, once. Yours forever.</p>
       <div class="om-btns">
         {%- if p.tags contains 'coming-soon' -%}<span class="om-b om-b2">Coming soon</span>{%- elsif vw -%}<a class="om-b om-b1" href="/cart/{{ vw.id }}:1">Buy for Windows</a>{%- endif -%}
         {%- if vm and p.tags contains 'mac-ready' -%}<a class="om-b om-b2" href="/cart/{{ vm.id }}:1">Buy for Mac</a>{%- elsif p.tags contains 'coming-soon' -%}{%- else -%}<span class="om-b om-b2">Mac version soon</span>{%- endif -%}

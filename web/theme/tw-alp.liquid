@@ -125,7 +125,7 @@
 
 <div class="alp">
   <div class="alp-bar" aria-label="Buy">
-    {%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'similar hardware' -%}
+    {%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '24 990 Kč', label: 'similar hardware' -%}
     <b>{{ price }}</b>
     {%- if p.tags contains 'coming-soon' -%}<span class="s">Coming soon</span>{%- else -%}
     {%- if vw -%}<a href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}
@@ -188,7 +188,7 @@
     <img src="{{ cdn }}tyrol-1890-karersee.jpg" alt="Karersee lake, photochrom print" loading="lazy">
     <div class="in">
       <h2 class="alp-d">Holla-di-ri-di-ooo</h2>
-      <p class="pr alp-t twc-big">{% render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'similar hardware' %}<br>Alpine Theremin: <b>{{ price }}</b>, once. Yours forever.</p>
+      <p class="pr alp-t twc-big">{% render 'tw-compare', usd: '$899', eur: '999 €', czk: '24 990 Kč', label: 'similar hardware' %}<br>Alpine Theremin: <b>{{ price }}</b>, once. Yours forever.</p>
       <div class="alp-btns">
         {%- if p.tags contains 'coming-soon' -%}<span class="alp-b alp-b2">Coming soon</span>{%- elsif vw -%}<a class="alp-b alp-b1" href="/cart/{{ vw.id }}:1">Buy for Windows</a>{%- endif -%}
         {%- if vm and p.tags contains 'mac-ready' -%}<a class="alp-b alp-b2" href="/cart/{{ vm.id }}:1">Buy for Mac</a>{%- elsif p.tags contains 'coming-soon' -%}{%- else -%}<span class="alp-b alp-b2">Mac version soon</span>{%- endif -%}
