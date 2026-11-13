@@ -229,32 +229,37 @@ void ThereminEngine::processPost (float* mono, float* L, float* R, int n)
             const float d = rageSm;
             float x = mono[i];
 
-            if (d > 0.25f)
+            if (d > 0.06f)
             {
-                const float f = clampv ((d - 0.25f) / 0.45f, 0.0f, 1.0f);
-                // fuzz with a slow "motor" growl: the clipper threshold flutters at ~33 Hz
-                growlPhase += (26.0f + 18.0f * f) / (float) fs;
+                const float f = clampv ((d - 0.06f) / 0.50f, 0.0f, 1.0f);
+                // sub-octave rasp: flip polarity every other cycle -> growl an octave down
+                if ((lastRageX <= 0.0f) && (x > 0.0f)) subFlip = -subFlip;
+                lastRageX = x;
+                // motor growl LFO ~ 30..55 Hz
+                growlPhase += (30.0f + 25.0f * f) / (float) fs;
                 growlPhase -= std::floor (growlPhase);
                 const float growl = 0.5f + 0.5f * std::sin (kTwoPi * growlPhase);
-                const float thr   = 0.9f - 0.55f * f * growl;
-                float fz = std::tanh (x * (2.0f + 30.0f * f)) * thr;
-                fz = clampv (fz, -thr * 0.8f, thr);                       // asymmetric -> buzz
-                // grit: crackle noise riding on the waveform
+                // hard fuzz
+                float fz = std::tanh (x * (3.0f + 60.0f * f));
+                fz = clampv (fz * 1.25f, -0.75f, 1.0f);                     // asymmetric -> buzz
+                // rasp: blend in the sub-octave square
+                fz = fz * (1.0f - 0.45f * f) + 0.45f * f * fz * subFlip;
+                // grit: crackle riding on the waveform
                 rageSeed = rageSeed * 1664525u + 1013904223u;
                 const float noise = ((float) (rageSeed >> 9) / 8388608.0f) - 1.0f;
-                fz += noise * std::fabs (fz) * 0.55f * f;
-                // gentle amplitude growl
-                fz *= 1.0f - 0.35f * f * growl;
+                fz += noise * (0.25f + 0.75f * std::fabs (fz)) * 0.9f * f;
+                // motor amplitude growl
+                fz *= 1.0f - 0.7f * f * growl;
                 x = x * (1.0f - f) + fz * f;
             }
-            if (d > 0.62f)
+            if (d > 0.5f)
             {
-                const float c = clampv ((d - 0.62f) / 0.38f, 0.0f, 1.0f);
-                crushPhase += 1.0f / (1.0f + 14.0f * c * c);
+                const float c = clampv ((d - 0.5f) / 0.5f, 0.0f, 1.0f);
+                crushPhase += 1.0f / (1.0f + 20.0f * c * c);
                 if (crushPhase >= 1.0f) { crushPhase -= 1.0f; crushHold = x; }
-                const float levels = 128.0f * std::pow (0.05f, c);
+                const float levels = 64.0f * std::pow (0.06f, c);
                 const float crushed = std::round (crushHold * levels) / levels;
-                x = x * (1.0f - 0.9f * c) + 0.9f * c * crushed;
+                x = x * (1.0f - c) + c * crushed;
             }
             x = rageDc.process (x);
 
@@ -262,7 +267,7 @@ void ThereminEngine::processPost (float* mono, float* L, float* R, int n)
             rageInPow  += (pre[j] * pre[j] - rageInPow)  * powCoef;
             rageOutPow += (x * x        - rageOutPow) * powCoef;
             const float match = std::sqrt ((rageInPow + 1.0e-9f) / (rageOutPow + 1.0e-9f));
-            x *= clampv (match, 0.05f, 4.0f) * (1.0f + 0.2f * d);
+            x *= clampv (match, 0.05f, 4.0f) * (1.0f + 0.6f * d);   // up to ~+4 dB at full rage
             mono[i] = x;
             L[i] = R[i] = x;
         }

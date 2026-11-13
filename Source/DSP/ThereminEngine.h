@@ -121,7 +121,7 @@ private:
     TubeSaturator saturator;
     // RAGE: fuzz / buzz / crush stage after the tone filter (driven by the same Drive knob)
     float rageAmt = 0.15f, rageSm = 0.15f, crushHold = 0.0f, crushPhase = 0.0f;
-    float rageInPow = 0.0f, rageOutPow = 0.0f, growlPhase = 0.0f; unsigned rageSeed = 22222u;
+    float rageInPow = 0.0f, rageOutPow = 0.0f, growlPhase = 0.0f, lastRageX = 0.0f, subFlip = 1.0f; unsigned rageSeed = 22222u;
     DCBlocker rageDc;
     FormantFilter formant;
     TapeDelay delay;
