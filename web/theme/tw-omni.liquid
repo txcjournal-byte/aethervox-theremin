@@ -126,14 +126,14 @@
   .om-bar .twc{display:inline-flex;flex-direction:column;line-height:1.05;margin-right:2px}
   html body .omx .om-bar .twc s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:system-ui,sans-serif!important;font-size:13px!important;color:rgba(255,255,255,.6)!important}
   html body .omx .om-bar .twc small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:system-ui,sans-serif!important;font-size:10px!important;color:rgba(255,255,255,.5)!important;letter-spacing:.02em}
-  html body .omx .twc-big s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:20px!important;opacity:.7}
+  html body .omx .twc-big s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:15px!important;opacity:.55}
   @media(max-width:560px){.om-bar .twc{display:none}}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
 
 <div class="omx">
   <div class="om-bar" aria-label="Buy">
-    {%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'Omnichord OM-108 hardware' -%}
+    {%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'similar hardware' -%}
     <b>{{ price }}</b>
     {%- if p.tags contains 'coming-soon' -%}<span class="s">Coming soon</span>{%- else -%}
     {%- if vw -%}<a href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}
@@ -215,7 +215,7 @@
     <img src="{{ cdn }}omnicore-hero.jpg?width=1800" alt="" loading="lazy">
     <div class="in">
       <h2 class="omd">Open the eye</h2>
-      <p class="pr omt twc-big">The hardware Omnichord: {% render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: '(Suzuki OM-108)' %}<br>OmniCore 3000: <b>{{ price }}</b>, once. Yours forever.</p>
+      <p class="pr omt twc-big">{% render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'similar hardware' %}<br>OmniCore 3000: <b>{{ price }}</b>, once. Yours forever.</p>
       <div class="om-btns">
         {%- if p.tags contains 'coming-soon' -%}<span class="om-b om-b2">Coming soon</span>{%- elsif vw -%}<a class="om-b om-b1" href="/cart/{{ vw.id }}:1">Buy for Windows</a>{%- endif -%}
         {%- if vm and p.tags contains 'mac-ready' -%}<a class="om-b om-b2" href="/cart/{{ vm.id }}:1">Buy for Mac</a>{%- elsif p.tags contains 'coming-soon' -%}{%- else -%}<span class="om-b om-b2">Mac version soon</span>{%- endif -%}

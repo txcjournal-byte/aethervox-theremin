@@ -131,9 +131,9 @@
               <p class="tg-schema">{{ kname }}.{% if fact != '' %} {{ fact }}{% endif %} VST3, AU, standalone.</p>
               <div class="tg-row">
                 {%- case pr.handle -%}
-                  {%- when 'omnicore-3000' -%}{%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'Omnichord hardware' -%}
-                  {%- when 'alpine-theremin' -%}{%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'Moog theremin hardware' -%}
-                  {%- when 'trapwin-vice-boss' -%}{%- render 'tw-compare', usd: '$899', eur: '958 €', czk: '≈ 24 000 Kč', label: 'Eventide H90 hardware' -%}
+                  {%- when 'omnicore-3000' -%}{%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'similar hardware' -%}
+                  {%- when 'alpine-theremin' -%}{%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'similar hardware' -%}
+                  {%- when 'trapwin-vice-boss' -%}{%- render 'tw-compare', usd: '$899', eur: '958 €', czk: '≈ 24 000 Kč', label: 'similar hardware' -%}
                 {%- endcase -%}
                 <span class="tg-price">{{ pr.price | money_without_trailing_zeros }}</span>
                 {%- if pr.tags contains 'coming-soon' -%}<span class="tg-b tg-off">Coming soon</span>{%- else -%}

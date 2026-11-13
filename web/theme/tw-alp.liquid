@@ -118,14 +118,14 @@
   .alp-bar .twc{display:inline-flex;flex-direction:column;line-height:1.05;margin-right:2px}
   html body .alp .alp-bar .twc s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:system-ui,sans-serif!important;font-size:13px!important;color:rgba(255,255,255,.6)!important}
   html body .alp .alp-bar .twc small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:system-ui,sans-serif!important;font-size:10px!important;color:rgba(255,255,255,.5)!important;letter-spacing:.02em}
-  html body .alp .twc-big s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:20px!important;opacity:.7}
+  html body .alp .twc-big s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:15px!important;opacity:.55}
   @media(max-width:560px){.alp-bar .twc{display:none}}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
 
 <div class="alp">
   <div class="alp-bar" aria-label="Buy">
-    {%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'Moog Etherwave hardware' -%}
+    {%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'similar hardware' -%}
     <b>{{ price }}</b>
     {%- if p.tags contains 'coming-soon' -%}<span class="s">Coming soon</span>{%- else -%}
     {%- if vw -%}<a href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}
@@ -188,7 +188,7 @@
     <img src="{{ cdn }}tyrol-1890-karersee.jpg" alt="Karersee lake, photochrom print" loading="lazy">
     <div class="in">
       <h2 class="alp-d">Holla-di-ri-di-ooo</h2>
-      <p class="pr alp-t twc-big">A hardware theremin: {% render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: '(Moog Etherwave)' %}<br>Alpine Theremin: <b>{{ price }}</b>, once. Yours forever.</p>
+      <p class="pr alp-t twc-big">{% render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'similar hardware' %}<br>Alpine Theremin: <b>{{ price }}</b>, once. Yours forever.</p>
       <div class="alp-btns">
         {%- if p.tags contains 'coming-soon' -%}<span class="alp-b alp-b2">Coming soon</span>{%- elsif vw -%}<a class="alp-b alp-b1" href="/cart/{{ vw.id }}:1">Buy for Windows</a>{%- endif -%}
         {%- if vm and p.tags contains 'mac-ready' -%}<a class="alp-b alp-b2" href="/cart/{{ vm.id }}:1">Buy for Mac</a>{%- elsif p.tags contains 'coming-soon' -%}{%- else -%}<span class="alp-b alp-b2">Mac version soon</span>{%- endif -%}
