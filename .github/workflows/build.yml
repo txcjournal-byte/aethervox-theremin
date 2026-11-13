@@ -6,7 +6,7 @@
 name: build
 on:
   push:
-    paths-ignore: [ "omnicore/**", ".github/workflows/omnicore.yml", "web/**" ]
+    paths-ignore: [ "omnicore/**", ".github/workflows/omnicore.yml", ".github/workflows/tts.yml", "web/**" ]
   workflow_dispatch:
 permissions:
   contents: write
