@@ -195,5 +195,82 @@ void OmniProcessor::mutate()
     set (PID::mutAmt, 0.0f, 0.6f);    set (PID::orbitMix, 0.0f, 0.7f);
 }
 
+const char* OmniProcessor::presetName (int i)
+{
+    static const char* n[numPresets] = { "OMNI GLASS", "TAPE DREAM", "8-BIT TEMPLE", "COSMIC HARP",
+                                         "MUTANT ORGAN", "WARP ORACLE", "DARK RITUAL", "NEON ARP" };
+    return n[jlimit (0, numPresets - 1, i)];
+}
+
+void OmniProcessor::applyPreset (int i)
+{
+    i = (i % numPresets + numPresets) % numPresets;
+    currentPreset.store (i);
+    auto set = [this] (const char* id, float v)
+    {
+        if (auto* prm = apvts.getParameter (id))
+        { prm->beginChangeGesture(); prm->setValueNotifyingHost (prm->convertTo0to1 (v)); prm->endChangeGesture(); }
+    };
+    auto reset = [&]
+    {
+        for (auto* prm : getParameters())
+            if (auto* r = dynamic_cast<RangedAudioParameter*> (prm))
+            {
+                const String id = r->getParameterID();
+                if (id == PID::mode || id == PID::chordType || id == PID::hold || id == PID::bass || id == PID::arpRate || id == PID::arpPat) continue;
+                r->beginChangeGesture(); r->setValueNotifyingHost (r->getDefaultValue()); r->endChangeGesture();
+            }
+    };
+    reset();
+    switch (i)
+    {
+        case 0: // OMNI GLASS - the classic omnichord: soft square-ish + sine bells, tape, space
+            set (PID::oscA, 0.15f); set (PID::oscBWave, 0); set (PID::oscBSemi, 12); set (PID::oscMix, 0.4f);
+            set (PID::cutoff, 3200); set (PID::release, 1.2f); set (PID::tapeMix, 0.4f); set (PID::spcMix, 0.35f); break;
+        case 1: // TAPE DREAM - warm saws through a wobbly cassette
+            set (PID::oscA, 0.66f); set (PID::oscMix, 0.15f); set (PID::cutoff, 1500); set (PID::drive, 0.45f);
+            set (PID::attack, 0.08f); set (PID::release, 1.6f); set (PID::tapeMix, 0.6f); set (PID::tapeWow, 0.7f);
+            set (PID::crushMix, 0.2f); set (PID::crushBits, 10); set (PID::spcMix, 0.4f); break;
+        case 2: // 8-BIT TEMPLE - console pulses, crushed, stereo delay
+            set (PID::oscA, 1.0f); set (PID::oscBWave, 3); set (PID::oscBBits, 3); set (PID::oscMix, 0.75f);
+            set (PID::cutoff, 9000); set (PID::envAmt, 0.1f); set (PID::crushMix, 0.5f); set (PID::crushBits, 6);
+            set (PID::crushDown, 6); set (PID::dlyMix, 0.35f); set (PID::spcMix, 0.2f); break;
+        case 3: // COSMIC HARP - plucky, shimmering to the sky
+            set (PID::oscA, 0.4f); set (PID::oscBWave, 6); set (PID::oscMix, 0.45f); set (PID::decay, 0.6f); set (PID::sustain, 0.0f);
+            set (PID::release, 1.8f); set (PID::shimmer, 0.65f); set (PID::spcMix, 0.55f); set (PID::spcSize, 0.9f);
+            set (PID::orbitMix, 0.35f); set (PID::dlyMix, 0.25f); break;
+        case 4: // MUTANT ORGAN - organ table, sample&hold filter mutations, rotary-ish orbit
+            set (PID::oscA, 0.3f); set (PID::oscBWave, 5); set (PID::oscMix, 0.65f); set (PID::cutoff, 2500);
+            set (PID::mutAmt, 0.55f); set (PID::mutRate, 0.45f); set (PID::orbitMix, 0.6f); set (PID::orbitRate, 0.55f);
+            set (PID::release, 0.4f); break;
+        case 5: // WARP ORACLE - ring-modulated metal, delays
+            set (PID::oscA, 0.6f); set (PID::oscBWave, 7); set (PID::oscMix, 0.5f); set (PID::warpMix, 0.45f); set (PID::warpHz, 310);
+            set (PID::reso, 0.55f); set (PID::cutoff, 1800); set (PID::dlyMix, 0.4f); set (PID::dlyFb, 0.55f); set (PID::spcMix, 0.4f); break;
+        case 6: // DARK RITUAL - low drones, resonant, huge space
+            set (PID::oscA, 0.75f); set (PID::oscBSemi, -12); set (PID::oscMix, 0.3f); set (PID::cutoff, 700); set (PID::reso, 0.6f);
+            set (PID::envAmt, 0.3f); set (PID::drive, 0.7f); set (PID::attack, 0.4f); set (PID::release, 3.0f);
+            set (PID::spcMix, 0.6f); set (PID::spcSize, 0.95f); set (PID::shimmer, 0.25f); set (PID::mutAmt, 0.2f); break;
+        case 7: // NEON ARP - snappy for the arpeggiator
+            set (PID::oscA, 0.9f); set (PID::oscBWave, 4); set (PID::oscMix, 0.35f); set (PID::cutoff, 1100); set (PID::reso, 0.5f);
+            set (PID::envAmt, 0.7f); set (PID::fDecay, 0.18f); set (PID::decay, 0.2f); set (PID::sustain, 0.25f); set (PID::release, 0.25f);
+            set (PID::dlyMix, 0.35f); set (PID::spcMix, 0.25f); break;
+        default: break;
+    }
+    if (cosmosLevel.load() > 0) setCosmos (cosmosLevel.load());
+}
+
+void OmniProcessor::setCosmos (int level)
+{
+    cosmosLevel.store (jlimit (0, 2, level));
+    auto set = [this] (const char* id, float v)
+    {
+        if (auto* prm = apvts.getParameter (id))
+        { prm->beginChangeGesture(); prm->setValueNotifyingHost (prm->convertTo0to1 (v)); prm->endChangeGesture(); }
+    };
+    const float k = level == 0 ? 0.0f : (level == 1 ? 0.45f : 1.0f);
+    set (PID::shimmer, 0.7f * k); set (PID::orbitMix, 0.6f * k); set (PID::mutAmt, 0.35f * k); set (PID::warpMix, level == 2 ? 0.18f : 0.0f);
+    set (PID::spcMix, 0.28f + 0.3f * k);
+}
+
 AudioProcessorEditor* OmniProcessor::createEditor() { return new OmniEditor (*this); }
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new OmniProcessor(); }

@@ -43,11 +43,12 @@ target_sources(OmniCore PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/DSP/OmniSynth.cpp)
+juce_add_binary_data(OmniCoreAssets SOURCES Assets/pyramid.jpg)
 target_include_directories(OmniCore PRIVATE Source Source/DSP)
 target_compile_definitions(OmniCore PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_MODAL_LOOPS_PERMITTED=0)
 target_link_libraries(OmniCore
-    PRIVATE juce::juce_audio_utils juce::juce_dsp
+    PRIVATE juce::juce_audio_utils juce::juce_dsp OmniCoreAssets
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 
 option(OMNI_BUILD_TESTS "Build the offline DSP test" ON)

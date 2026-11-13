@@ -47,6 +47,15 @@ public:
     /** Clicking the eye: randomise the sound into a new (musical) patch. */
     void mutate();
 
+    /** Curated sounds (the pyramid has no knobs - presets + DAW automation). */
+    static constexpr int numPresets = 8;
+    static const char* presetName (int i);
+    void applyPreset (int i);
+    std::atomic<int> currentPreset { 0 };
+    /** COSMOS key: 0 off, 1 drift, 2 full cosmos. */
+    void setCosmos (int level);
+    std::atomic<int> cosmosLevel { 0 };
+
     /** On-screen keys, chord buttons and strings write here (message thread); drained in processBlock. */
     juce::MidiKeyboardState keyboardState;
 
