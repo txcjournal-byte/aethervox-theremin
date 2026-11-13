@@ -19,6 +19,7 @@ void ThereminEngine::prepare (double sampleRate)
         vc.vibPhase = 0.137 * (double) v;                                    // voices don't vibrate in lock-step
     }
     saturator.prepare (fs);
+    rageDc.prepare (fs, 12.0f);
     formant.prepare (fs);
     delay.prepare (fs);
     reverb.prepare (fs);
@@ -64,7 +65,8 @@ void ThereminEngine::setParameters (const EngineParams& p)
         vc.osc[3].setCoupling (p.coupling * 0.5f);
         vc.targetMidi = quantizer.process (vc.targetMidiRaw, p.quantAmount);
     }
-    saturator.setDrive (p.drive);
+    saturator.setDrive (clampv (p.drive * 1.6f, 0.0f, 1.0f));   // tube warmth comes in first
+    rageAmt = clampv (p.drive, 0.0f, 1.0f);
     formant.setPreset (p.formant);
     formant.setMix (p.formantMix);
     delay.setParameters (p.delayMs, p.delayFb, p.delayMix);
@@ -194,8 +196,6 @@ void ThereminEngine::renderVoice (float* dest, int n)
 
 void ThereminEngine::processPost (float* mono, float* L, float* R, int n)
 {
-    saturator.process (mono, n);
-
     formant.setPitch (getCurrentHz());
     formant.setShift (timbreMod >= 0.0f ? (timbreMod - 0.5f) * 2.0f : 0.0f);
     formant.process (mono, n);
@@ -210,7 +210,62 @@ void ThereminEngine::processPost (float* mono, float* L, float* R, int n)
             toneFilter.set (250.0f * std::pow (72.0f, bb), 0.62f, fs);   // 250 Hz .. 18 kHz
         }
         mono[i] = toneFilter.lowpass (mono[i]);
-        L[i] = R[i] = mono[i];
+    }
+
+    // --- RAGE (Drive knob): tube warmth -> fuzz growl -> grit/crackle -> broken bitcrush.
+    //     Loudness is matched to the clean signal, so the knob changes character, not volume.
+    float pre[512];
+    for (int off = 0; off < n; off += 512)
+    {
+        const int m = std::min (512, n - off);
+        std::copy (mono + off, mono + off + m, pre);
+        saturator.process (mono + off, m);
+
+        const float powCoef = 1.0f - std::exp (-1.0f / (0.03f * (float) fs));
+        for (int j = 0; j < m; ++j)
+        {
+            const int i = off + j;
+            rageSm += (rageAmt - rageSm) * 0.002f;
+            const float d = rageSm;
+            float x = mono[i];
+
+            if (d > 0.25f)
+            {
+                const float f = clampv ((d - 0.25f) / 0.45f, 0.0f, 1.0f);
+                // fuzz with a slow "motor" growl: the clipper threshold flutters at ~33 Hz
+                growlPhase += (26.0f + 18.0f * f) / (float) fs;
+                growlPhase -= std::floor (growlPhase);
+                const float growl = 0.5f + 0.5f * std::sin (kTwoPi * growlPhase);
+                const float thr   = 0.9f - 0.55f * f * growl;
+                float fz = std::tanh (x * (2.0f + 30.0f * f)) * thr;
+                fz = clampv (fz, -thr * 0.8f, thr);                       // asymmetric -> buzz
+                // grit: crackle noise riding on the waveform
+                rageSeed = rageSeed * 1664525u + 1013904223u;
+                const float noise = ((float) (rageSeed >> 9) / 8388608.0f) - 1.0f;
+                fz += noise * std::fabs (fz) * 0.55f * f;
+                // gentle amplitude growl
+                fz *= 1.0f - 0.35f * f * growl;
+                x = x * (1.0f - f) + fz * f;
+            }
+            if (d > 0.62f)
+            {
+                const float c = clampv ((d - 0.62f) / 0.38f, 0.0f, 1.0f);
+                crushPhase += 1.0f / (1.0f + 14.0f * c * c);
+                if (crushPhase >= 1.0f) { crushPhase -= 1.0f; crushHold = x; }
+                const float levels = 128.0f * std::pow (0.05f, c);
+                const float crushed = std::round (crushHold * levels) / levels;
+                x = x * (1.0f - 0.9f * c) + 0.9f * c * crushed;
+            }
+            x = rageDc.process (x);
+
+            // loudness match to the clean (pre-drive) signal
+            rageInPow  += (pre[j] * pre[j] - rageInPow)  * powCoef;
+            rageOutPow += (x * x        - rageOutPow) * powCoef;
+            const float match = std::sqrt ((rageInPow + 1.0e-9f) / (rageOutPow + 1.0e-9f));
+            x *= clampv (match, 0.05f, 4.0f) * (1.0f + 0.2f * d);
+            mono[i] = x;
+            L[i] = R[i] = x;
+        }
     }
 
     delay.process (L, R, n);
