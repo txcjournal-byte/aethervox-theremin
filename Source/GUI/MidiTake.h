@@ -25,35 +25,81 @@ public:
         if (! points.empty()) points.push_back ({ timeSec, points.back().pitch, 0.0f });
     }
 
-    bool isEmpty() const { return countNotes() == 0; }
+    bool isEmpty() const { return buildPhrases().empty(); }
     void clear() { points.clear(); }
 
-    int countNotes() const { return (int) buildNotes().size(); }
+    int countNotes() const { return (int) buildPhrases().size(); }
 
-    /** Writes the take as a one-track MIDI file. Returns false if there is nothing to write. */
+    /** Writes the take as a one-track MIDI file that replays the live playing 1:1:
+        one note per phrase (re-struck only for very wide slides) + 14-bit pitch bend
+        for every slide and wobble + CC11 expression for the hand volume.
+        Pitch bend range is announced with RPN 0 (and the plugin defaults to it). */
     bool writeTo (const juce::File& file, double bpm) const
     {
-        const auto notes = buildNotes();
-        if (notes.empty()) return false;
+        const auto phrases = buildPhrases();
+        if (phrases.empty()) return false;
 
         constexpr int ppq = 960;
-        const double ticksPerSec = ppq * juce::jlimit (20.0, 400.0, bpm) / 60.0;
+        const double tempoBpm = juce::jlimit (20.0, 400.0, bpm);
+        const double ticksPerSec = ppq * tempoBpm / 60.0;
+        auto tick = [&] (double t) { return (t - start) * ticksPerSec; };
 
         juce::MidiMessageSequence seq;
-        auto tempo = juce::MidiMessage::tempoMetaEvent (juce::roundToInt (60000000.0 / juce::jlimit (20.0, 400.0, bpm)));
-        tempo.setTimeStamp (0);
-        seq.addEvent (tempo);
-        auto name = juce::MidiMessage::textMetaEvent (3, "Alpine Theremin");
-        name.setTimeStamp (0);
-        seq.addEvent (name);
+        auto add = [&] (juce::MidiMessage m, double ticks) { m.setTimeStamp (juce::jmax (0.0, ticks)); seq.addEvent (m); };
 
-        for (const auto& n : notes)
+        add (juce::MidiMessage::tempoMetaEvent (juce::roundToInt (60000000.0 / tempoBpm)), 0);
+        add (juce::MidiMessage::textMetaEvent (3, "Alpine Theremin live take"), 0);
+        // RPN 0: pitch bend sensitivity = bendRange semitones
+        add (juce::MidiMessage::controllerEvent (1, 101, 0), 0);
+        add (juce::MidiMessage::controllerEvent (1, 100, 0), 0);
+        add (juce::MidiMessage::controllerEvent (1, 6, bendRange), 0);
+        add (juce::MidiMessage::controllerEvent (1, 38, 0), 0);
+        add (juce::MidiMessage::controllerEvent (1, 101, 127), 0);
+        add (juce::MidiMessage::controllerEvent (1, 100, 127), 0);
+
+        auto bendValue = [] (float semis)
         {
-            const double on  = (n.on  - start) * ticksPerSec;
-            const double off = juce::jmax (on + ppq / 32.0, (n.off - start) * ticksPerSec);
-            seq.addEvent (juce::MidiMessage::noteOn  (1, n.note, (juce::uint8) n.velocity), on);
-            seq.addEvent (juce::MidiMessage::noteOff (1, n.note), off);
+            const float v = juce::jlimit (-1.0f, 1.0f, semis / (float) bendRange);
+            return juce::jlimit (0, 16383, 8192 + juce::roundToInt (v * (v >= 0 ? 8191.0f : 8192.0f)));
+        };
+
+        for (const auto& ph : phrases)
+        {
+            int base = juce::jlimit (0, 127, (int) std::lround (points[(size_t) ph.first].pitch));
+            const double t0 = points[(size_t) ph.first].t;
+            // bend + expression first, so the note starts exactly where the hand was
+            add (juce::MidiMessage::pitchWheel (1, bendValue (points[(size_t) ph.first].pitch - (float) base)), tick (t0) - 1);
+            add (juce::MidiMessage::controllerEvent (1, 11, juce::jlimit (1, 127, juce::roundToInt (points[(size_t) ph.first].vol * 127.0f))), tick (t0) - 1);
+            add (juce::MidiMessage::noteOn (1, base, (juce::uint8) 127), tick (t0));
+
+            double lastT = t0; int lastBend = -1, lastCc = -1;
+            for (int i = ph.first; i <= ph.last; ++i)
+            {
+                const auto& pt = points[(size_t) i];
+                if (std::fabs (pt.pitch - (float) base) > (float) bendRange - 1.0f)
+                {
+                    // very wide slide: re-strike legato on a new base note, bend continues seamlessly
+                    add (juce::MidiMessage::noteOff (1, base), tick (pt.t));
+                    base = juce::jlimit (0, 127, (int) std::lround (pt.pitch));
+                    add (juce::MidiMessage::pitchWheel (1, bendValue (pt.pitch - (float) base)), tick (pt.t));
+                    add (juce::MidiMessage::noteOn (1, base, (juce::uint8) 127), tick (pt.t) + 0.5);
+                    lastBend = -1;
+                }
+                if (pt.t - lastT < 0.006 && i != ph.last) continue;   // ~166 points / s is plenty
+                lastT = pt.t;
+                const int b = bendValue (pt.pitch - (float) base);
+                if (b != lastBend) { add (juce::MidiMessage::pitchWheel (1, b), tick (pt.t)); lastBend = b; }
+                const int c = juce::jlimit (1, 127, juce::roundToInt (pt.vol * 127.0f));
+                if (c != lastCc) { add (juce::MidiMessage::controllerEvent (1, 11, c), tick (pt.t)); lastCc = c; }
+            }
+            const double tEnd = juce::jmax (points[(size_t) ph.last].t, t0 + 0.03);
+            add (juce::MidiMessage::noteOff (1, base), tick (tEnd));
         }
+        // leave the channel clean for whatever comes next
+        const double tail = tick (points.back().t) + ppq / 8.0;
+        add (juce::MidiMessage::pitchWheel (1, 8192), tail);
+        add (juce::MidiMessage::controllerEvent (1, 11, 127), tail);
+
         seq.updateMatchedPairs();
         seq.sort();
 
@@ -68,52 +114,36 @@ public:
         return true;
     }
 
+    static constexpr int bendRange = 12;   // semitones, matches the plugin's default Pitch Bend Range
+
 private:
     struct Point { double t; float pitch, vol; };
-    struct Note  { int note; int velocity; double on, off; };
 
     static constexpr double gapForNewTake = 4.0;    // seconds of silence start a fresh take
     static constexpr float  onLevel  = 0.06f;       // hand volume that counts as sounding
     static constexpr float  offLevel = 0.03f;
-    static constexpr double minHold  = 0.07;        // a pitch must hold this long to become a new note
 
     std::vector<Point> points;
     double start = 0.0;
 
-    std::vector<Note> buildNotes() const
+    struct Phrase { int first, last; };
+
+    /** Sounding stretches of the take (hand volume above the threshold). */
+    std::vector<Phrase> buildPhrases() const
     {
-        std::vector<Note> out;
-        bool sounding = false;
-        int cur = -1; float peak = 0.0f; double noteStart = 0.0;
-        int cand = -1; double candSince = 0.0;
-
-        auto close = [&] (double t)
+        std::vector<Phrase> out;
+        int first = -1;
+        for (int i = 0; i < (int) points.size(); ++i)
         {
-            if (cur >= 0 && t - noteStart >= 0.03)
-                out.push_back ({ cur, juce::jlimit (20, 127, juce::roundToInt (40.0f + peak * 87.0f)), noteStart, t });
-            cur = -1; peak = 0.0f;
-        };
-
-        for (const auto& p : points)
-        {
-            const int semi = juce::jlimit (0, 127, (int) std::lround (p.pitch));
-            if (! sounding)
+            const float v = points[(size_t) i].vol;
+            if (first < 0) { if (v >= onLevel) first = i; continue; }
+            if (v < offLevel)
             {
-                if (p.vol >= onLevel) { sounding = true; cur = semi; noteStart = p.t; peak = p.vol; cand = -1; }
-                continue;
-            }
-            if (p.vol < offLevel) { close (p.t); sounding = false; continue; }
-
-            peak = juce::jmax (peak, p.vol);
-            if (semi == cur) { cand = -1; continue; }
-            if (semi != cand) { cand = semi; candSince = p.t; continue; }
-            if (p.t - candSince >= minHold)
-            {
-                close (candSince);
-                cur = semi; noteStart = candSince; peak = p.vol; cand = -1;
+                if (points[(size_t) (i - 1)].t - points[(size_t) first].t >= 0.03) out.push_back ({ first, i - 1 });
+                first = -1;
             }
         }
-        if (sounding && ! points.empty()) close (points.back().t);
+        if (first >= 0 && (int) points.size() - 1 > first) out.push_back ({ first, (int) points.size() - 1 });
         return out;
     }
 };
@@ -133,7 +163,7 @@ public:
         g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
         g.setColour (juce::Colour (n > 0 ? 0xff1f3a2c : 0xffe6dccb));
         g.setFont (juce::FontOptions (r.getHeight() * 0.42f, juce::Font::bold));
-        g.drawText (n > 0 ? "DRAG MIDI  (" + juce::String (n) + " notes)" : "PLAY, THEN DRAG MIDI",
+        g.drawText (n > 0 ? "DRAG MIDI  (" + juce::String (n) + (n == 1 ? " phrase)" : " phrases)") : "PLAY, THEN DRAG MIDI",
                     getLocalBounds(), juce::Justification::centred);
     }
 

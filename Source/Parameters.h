@@ -139,7 +139,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 
     // MIDI
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::mpe, 1 }, "MPE Mode", false));
-    layout.add (std::make_unique<AudioParameterInt>  (ParameterID { ParamIDs::pbRange, 1 }, "Pitch Bend Range", 1, 24, 2,
+    layout.add (std::make_unique<AudioParameterInt>  (ParameterID { ParamIDs::pbRange, 1 }, "Pitch Bend Range", 1, 24, 12,
         AudioParameterIntAttributes().withStringFromValueFunction ([] (int v, int) { return String (v) + " st"; })));
 
     // VOICES / LAYERING

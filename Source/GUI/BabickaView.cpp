@@ -112,9 +112,9 @@ void BabickaView::applyMouse (Point<float> d)
 void BabickaView::recordPoint()
 {
     // the same pitch the engine plays: field base + tuning + hand position over the sensitivity range
-    const float tune = proc.apvts.getRawParameterValue (ParamIDs::pitchTune)->load();
+    // note + bend in the exported take; the plugin adds Tune itself on playback, like for the mouse
     const float sens = proc.apvts.getRawParameterValue (ParamIDs::pitchSens)->load();
-    const float midi = Params::pitchFieldBaseMidi + tune + handPitch * sens * 12.0f;
+    const float midi = Params::pitchFieldBaseMidi + handPitch * sens * 12.0f;
     take.add (Time::getMillisecondCounterHiRes() * 0.001, midi, handVolume);
 }
 

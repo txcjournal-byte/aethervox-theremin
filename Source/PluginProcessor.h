@@ -77,6 +77,8 @@ private:
     float globalBend = 0.0f;
     float ccPitch = 0.0f, ccVolume = 0.0f;
     bool  ccVolumeSeen = false;
+    int   rpnMsb = 127, rpnLsb = 127;      // RPN selection (CC101 / CC100)
+    float rpnBendRange = -1.0f;            // pitch bend range set over MIDI (RPN 0), < 0 = use the knob
     float lastMidi = 60.0f;
 
     // ---- cached parameter pointers -----------------------------------------

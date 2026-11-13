@@ -147,7 +147,7 @@ void AetherVoxProcessor::handleMidi (const juce::MidiMessage& m)
     }
     else if (m.isResetAllControllers())
     {
-        globalBend = 0.0f; chanBend.fill (0.0f); ccVolumeSeen = false;
+        globalBend = 0.0f; chanBend.fill (0.0f); ccVolumeSeen = false; rpnBendRange = -1.0f;
     }
     else if (m.isController())
     {
@@ -157,6 +157,10 @@ void AetherVoxProcessor::handleMidi (const juce::MidiMessage& m)
         if (mpe && ch != 1 && cc == 74)        { chanTimbre[ci] = v; timbreSeen[ci] = true; }
         else if (cc == 1 || cc == 74)          { ccPitch = v; }
         else if (cc == 7 || cc == 11)          { ccVolume = v; ccVolumeSeen = true; }
+        else if (cc == 101)                    rpnMsb = m.getControllerValue();
+        else if (cc == 100)                    rpnLsb = m.getControllerValue();
+        else if (cc == 6 && rpnMsb == 0 && rpnLsb == 0)
+            rpnBendRange = (float) juce::jlimit (1, 48, m.getControllerValue());
     }
 }
 
@@ -204,7 +208,7 @@ void AetherVoxProcessor::updateTargets()
     const float baseMidi = Params::pitchFieldBaseMidi + tune;
     const float span     = octaves * 12.0f;
     const bool  mpe      = raw.mpe->load() > 0.5f;
-    const float pbRange  = raw.pbRange->load();
+    const float pbRange  = rpnBendRange > 0.0f ? rpnBendRange : raw.pbRange->load();
     const bool  poly     = raw.playMode->load() < 0.5f;
     const float gamma    = juce::jmap (raw.volSens->load(), 2.5f, 0.4f);   // volume antenna response
     auto shapeAmp = [gamma] (float a) { return std::pow (juce::jlimit (0.0f, 1.0f, a), gamma); };
