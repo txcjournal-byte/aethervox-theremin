@@ -95,7 +95,7 @@ void BabickaView::mouseUp (const MouseEvent&)
     playing = false;
     handVolume = 0.0f;
     syncPad();
-    take.release (Time::getMillisecondCounterHiRes() * 0.001);
+    { const double t = takeTime(); if (t >= 0.0) take.release (t); }
     for (auto* id : { ParamIDs::handPitch, ParamIDs::handVol })
         if (auto* prm = proc.apvts.getParameter (id)) prm->endChangeGesture();
 }
@@ -115,7 +115,25 @@ void BabickaView::recordPoint()
     // note + bend in the exported take; the plugin adds Tune itself on playback, like for the mouse
     const float sens = proc.apvts.getRawParameterValue (ParamIDs::pitchSens)->load();
     const float midi = Params::pitchFieldBaseMidi + handPitch * sens * 12.0f;
-    take.add (Time::getMillisecondCounterHiRes() * 0.001, midi, handVolume);
+    const double t = takeTime();
+    if (t >= 0.0) take.add (t, midi, handVolume);
+}
+
+double BabickaView::takeTime()
+{
+    if (! take.isSync()) return Time::getMillisecondCounterHiRes() * 0.001;
+    // synced: song seconds from bar 1; a pattern loop continues after the last bar instead of folding back
+    const double q = proc.songPpqNow();
+    if (q < 0.0) return -1.0;
+    if (q + 0.01 < lastSongPpq) loopOffset += std::ceil ((lastSongPpq + 1.0e-6) / 4.0) * 4.0;
+    lastSongPpq = q;
+    return (q + loopOffset) * 60.0 / juce::jmax (20.0, proc.hostBpm.load());
+}
+
+void BabickaView::hostStarted()
+{
+    if (! take.isSync()) return;
+    take.clear(); loopOffset = 0.0; lastSongPpq = -1.0;
 }
 
 void BabickaView::syncPad()

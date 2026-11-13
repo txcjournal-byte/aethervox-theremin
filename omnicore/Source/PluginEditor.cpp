@@ -53,6 +53,7 @@ OmniEditor::OmniEditor (OmniProcessor& p) : AudioProcessorEditor (p), proc (p)
     setWantsKeyboardFocus (true);
     startTimerHz (25);
     showLed ("OMNICORE 3000", OmniProcessor::presetName (proc.currentPreset.load()));
+    take.setSync ((bool) proc.apvts.state.getProperty ("takeSync", false));
 }
 
 void OmniEditor::buildKeys()
@@ -282,6 +283,7 @@ void OmniEditor::mouseDown (const MouseEvent& e)
 {
     grabKeyboardFocus();
     const auto pp = toPhoto (e.position);
+    if (e.mods.isPopupMenu() && (ledBox.contains (pp) || dragBox.contains (pp))) { showTakeMenu(); return; }
     if (ledBox.contains (pp) || dragBox.contains (pp))
     {
         ledDrag = true;
@@ -433,6 +435,27 @@ void OmniEditor::mouseDoubleClick (const MouseEvent& e)
     if (ledBox.contains (pp) || dragBox.contains (pp)) { take.clear(); showLed ("MIDI TAKE", "CLEARED"); }
 }
 
+void OmniEditor::showTakeMenu()
+{
+    PopupMenu m;
+    m.addSectionHeader ("MIDI TAKE  (" + String (take.countNotes()) + " notes)");
+    m.addItem (1, "Reset - start again");
+    m.addSeparator();
+    m.addItem (2, "Free: catch what I play, drag it anywhere", true, ! take.isSync());
+    m.addItem (3, "Sync with FL: press Record / Play, play, stop, drop at bar 1", true, take.isSync());
+    m.showMenuAsync (PopupMenu::Options().withTargetComponent (this).withMousePosition(), [this] (int r)
+    {
+        if (r == 1) { take.clear(); showLed ("MIDI TAKE", "RESET - PLAY AGAIN"); }
+        if (r == 2 || r == 3)
+        {
+            take.setSync (r == 3);
+            proc.apvts.state.setProperty ("takeSync", r == 3, nullptr);
+            showLed (r == 3 ? "SYNC WITH FL" : "FREE TAKE", r == 3 ? "REC IN FL, PLAY, STOP, DRAG" : "PLAY, THEN DRAG");
+        }
+        repaint();
+    });
+}
+
 File OmniEditor::writeTake()
 {
     auto f = File::getSpecialLocation (File::tempDirectory).getChildFile ("OmniCore 3000 take.mid");
@@ -443,6 +466,12 @@ File OmniEditor::writeTake()
 // -----------------------------------------------------------------------------
 void OmniEditor::timerCallback()
 {
+    // SYNC take: a new take every time the host starts (FL Record / Play)
+    {
+        const bool playing = proc.hostPlaying.load();
+        if (playing && ! wasHostPlaying) take.hostStarted();
+        wasHostPlaying = playing;
+    }
     // collect what the pyramid played since the last tick
     {
         const auto scope = proc.takeFifo.read (proc.takeFifo.getNumReady());
@@ -482,7 +511,7 @@ void OmniEditor::timerCallback()
     for (auto gl : stringGlow) h = h * 7 + (int64) (gl * 20.0f);
     const bool msg = Time::getMillisecondCounterHiRes() < ledUntil;
     h = h * 131 + (msg ? led1.hashCode64() * 3 + led2.hashCode64() : proc.dispRoot.load() * 17 + proc.dispType.load());
-    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0);
+    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0) + (proc.hostPlaying.load() ? 7 : 0) + (take.isSync() ? 13 : 0);
     if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 360.0f })); }
 }
 
@@ -595,7 +624,11 @@ void OmniEditor::paint (Graphics& g)
         g.setColour (Colours::white.withAlpha (0.18f));
         g.drawLine (dragBox.getX() + 4.0f, dragBox.getBottom() + 0.5f, dragBox.getRight() - 4.0f, dragBox.getBottom() + 0.5f, 1.0f);
         const Font mid (FontOptions (Font::getDefaultMonospacedFontName(), 15.0f, Font::bold));
-        draw (n > 0 && ! take.isFinished() ? "DRAG MIDI >  " + String (n) + " NOTES"
-                                            : (n > 0 ? "DROPPED - PLAY = NEW TAKE" : "PLAY, THEN DRAG MIDI"), dragBox, mid, Justification::centred);
+        String t;
+        if (take.isSync())
+            t = proc.hostPlaying.load() ? "REC  " + String (n) + " NOTES" : (n > 0 ? "DRAG MIDI > BAR 1  " + String (n) : "SYNC: PRESS REC IN FL");
+        else
+            t = n > 0 && ! take.isFinished() ? "DRAG MIDI >  " + String (n) + " NOTES" : (n > 0 ? "DROPPED - PLAY = NEW TAKE" : "PLAY, THEN DRAG MIDI");
+        draw (t, dragBox, mid, Justification::centred);
     }
 }

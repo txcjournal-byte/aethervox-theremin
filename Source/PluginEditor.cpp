@@ -38,6 +38,11 @@ AetherVoxEditor::AetherVoxEditor (AetherVoxProcessor& p)
         if (! view.getTake().writeTo (f, proc.hostBpm.load())) f.deleteFile();
         return f;
     };
+    dragMidi.onReset     = [this] { view.getTake().clear(); };
+    dragMidi.isSync      = [this] { return view.getTake().isSync(); };
+    dragMidi.hostPlaying = [this] { return proc.hostPlaying.load(); };
+    dragMidi.setSync     = [this] (bool on) { view.getTake().setSync (on); proc.apvts.state.setProperty ("takeSync", on, nullptr); };
+    view.getTake().setSync ((bool) proc.apvts.state.getProperty ("takeSync", false));
     body.addAndMakeVisible (dragMidi);
 
     // default size: about half the screen width (fits inside the DAW), resizable from the corner
@@ -66,6 +71,9 @@ void AetherVoxEditor::timerCallback()
     const float dt = jlimit (0.0f, 0.1f, (float) (now - lastTick) * 0.001f);
     lastTick = now;
     view.tick (dt);
+    const bool playing = proc.hostPlaying.load();
+    if (playing && ! wasHostPlaying) view.hostStarted();
+    wasHostPlaying = playing;
     if (++dragRepaint % 10 == 0) dragMidi.repaint();
 }
 

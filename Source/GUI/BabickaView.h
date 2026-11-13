@@ -43,6 +43,8 @@ public:
     void tick (float dtSeconds);
 
     MidiTake& getTake() { return take; }
+    /** Host transport started: a synced take starts over. */
+    void hostStarted();
 
     static constexpr int designW = 1600;
     static constexpr int designH = 901;
@@ -78,6 +80,8 @@ private:
     bool playing = false;
     float handPitch = 0.5f, handVolume = 0.0f;
     MidiTake take;
+    double takeTime();
+    double loopOffset = 0.0, lastSongPpq = -1.0;
     void recordPoint();
 };
 

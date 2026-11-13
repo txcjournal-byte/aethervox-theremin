@@ -323,6 +323,7 @@ void AetherVoxProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         {
             playingNow = posInfo->getIsPlaying();
             if (auto b = posInfo->getBpm()) if (*b > 1.0) hostBpm.store (*b);
+            if (playingNow) if (auto q = posInfo->getPpqPosition()) { songPpq.store (*q); songStampMs.store (juce::Time::getMillisecondCounterHiRes()); }
         }
     hostPlaying.store (playingNow);
 

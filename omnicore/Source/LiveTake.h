@@ -18,8 +18,30 @@ public:
     /** Silence longer than this starts a fresh take. */
     static constexpr double gapForNewTake = 3.0;
 
-    void add (const Ev& e)
+    /** SYNC mode: the take follows the host - it starts when the host starts playing/recording,
+        keeps the song position, and the .mid lines up with bar 1 when dropped into the piano roll. */
+    void setSync (bool on) { if (on != sync) { sync = on; clear(); } }
+    bool isSync() const { return sync; }
+    /** Host transport just started: a fresh synced take. */
+    void hostStarted() { if (sync) { clear(); finished = false; } }
+
+    void add (Ev e)
     {
+        if (sync)
+        {
+            if (e.ppq < 0.0) return;                                            // only while the host runs
+            if (! evs.empty() && e.ppq + 0.01 < lastRawPpq)                     // pattern looped: keep going after it
+                loopOffset += std::ceil ((lastRawPpq + 1.0e-6) / 4.0) * 4.0;
+            lastRawPpq = e.ppq;
+            e.ppq += loopOffset;
+            if (e.on) ++notes;
+            else if (evs.empty()) return;
+            if (e.note >= 0 && e.note < 128) held[(size_t) e.note] = e.on;
+            if (e.on) { lastOnSec = e.sec; lastOnPpq = e.ppq; }
+            lastSec = e.sec;
+            evs.push_back (e);
+            return;
+        }
         const bool synced = e.ppq >= 0.0;
         if (e.on)
         {
@@ -43,7 +65,7 @@ public:
     void markFinished() { finished = true; }
     bool isFinished() const { return finished; }
 
-    void clear() { evs.clear(); held.fill (false); notes = 0; }
+    void clear() { evs.clear(); held.fill (false); notes = 0; loopOffset = 0.0; lastRawPpq = -1.0; }
     bool isEmpty() const { return notes == 0; }
     int countNotes() const { return notes; }
     bool isSounding (double nowSec = -1.0) const
@@ -71,7 +93,8 @@ public:
         const double t0 = first->sec;
         auto tick = [&] (const Ev& e)
         {
-            const double beats = lead + (e.sec - t0) * tempo / 60.0;
+            // SYNC: absolute song position (bar 1 = 0); free: live timing from the first note
+            const double beats = sync ? e.ppq : lead + (e.sec - t0) * tempo / 60.0;
             return juce::jmax (0.0, std::round (beats * tpq));
         };
 
@@ -127,5 +150,6 @@ private:
     std::array<bool, 128> held {};
     int notes = 0;
     double lastSec = -1.0e9, lastOnSec = -1.0e9, lastOnPpq = -1.0;
-    bool finished = false;
+    bool finished = false, sync = false;
+    double loopOffset = 0.0, lastRawPpq = -1.0;
 };

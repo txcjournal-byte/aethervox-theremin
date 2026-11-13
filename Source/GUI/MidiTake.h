@@ -12,10 +12,15 @@ class MidiTake
 {
 public:
     /** Add one point of the performance. timeSec is wall-clock seconds. */
+    /** SYNC mode: times are song seconds from bar 1 (only while the host plays); the .mid keeps
+        the song position, so dropped at the start of the piano roll it sits exactly where it was played. */
+    void setSync (bool on) { if (on != sync) { sync = on; points.clear(); } }
+    bool isSync() const { return sync; }
+
     void add (double timeSec, float midiPitch, float volume)
     {
-        if (! points.empty() && timeSec - points.back().t > gapForNewTake) points.clear();
-        if (points.empty()) start = timeSec;
+        if (! sync && ! points.empty() && timeSec - points.back().t > gapForNewTake) points.clear();
+        if (points.empty()) start = sync ? 0.0 : timeSec;
         points.push_back ({ timeSec, midiPitch, volume });
     }
 
@@ -78,6 +83,7 @@ private:
 
     std::vector<Point> points;
     double start = 0.0;
+    bool sync = false;
 
     struct Note { int note; float vol; double on, off; };
 
@@ -134,6 +140,9 @@ class DragMidiButton : public juce::Component
 public:
     std::function<juce::File()> makeFile;   // returns an existing .mid file, or a non-existent one if empty
     std::function<int()> noteCount;
+    std::function<void()> onReset, onDropped;
+    std::function<bool()> isSync, hostPlaying;
+    std::function<void (bool)> setSync;
 
     void paint (juce::Graphics& g) override
     {
@@ -143,20 +152,45 @@ public:
         g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
         g.setColour (juce::Colour (n > 0 ? 0xff1f3a2c : 0xffe6dccb));
         g.setFont (juce::FontOptions (r.getHeight() * 0.42f, juce::Font::bold));
-        g.drawText (n > 0 ? "DRAG MIDI  (" + juce::String (n) + " notes)" : "PLAY, THEN DRAG MIDI",
-                    getLocalBounds(), juce::Justification::centred);
+        const bool sync = isSync && isSync();
+        juce::String t;
+        if (sync)
+            t = (hostPlaying && hostPlaying()) ? "REC  (" + juce::String (n) + " notes)"
+                                               : (n > 0 ? "DRAG MIDI > BAR 1  (" + juce::String (n) + ")" : "SYNC: PRESS REC IN FL");
+        else
+            t = n > 0 ? "DRAG MIDI  (" + juce::String (n) + " notes)" : "PLAY, THEN DRAG MIDI";
+        g.drawText (t, getLocalBounds(), juce::Justification::centred);
     }
 
     void mouseEnter (const juce::MouseEvent&) override { setMouseCursor (juce::MouseCursor::DraggingHandCursor); }
 
+    void mouseDown (const juce::MouseEvent& e) override
+    {
+        if (! e.mods.isPopupMenu()) return;
+        // right click: reset the take, or choose free / synced recording
+        const bool sync = isSync && isSync();
+        juce::PopupMenu m;
+        m.addSectionHeader ("MIDI TAKE  (" + juce::String (noteCount ? noteCount() : 0) + " notes)");
+        m.addItem (1, "Reset - start again");
+        m.addSeparator();
+        m.addItem (2, "Free: catch what I play, drag it anywhere", true, ! sync);
+        m.addItem (3, "Sync with FL: press Record / Play, play, stop, drop at bar 1", true, sync);
+        m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this), [this] (int r)
+        {
+            if (r == 1 && onReset) onReset();
+            if ((r == 2 || r == 3) && setSync) setSync (r == 3);
+            repaint();
+        });
+    }
+
     void mouseDrag (const juce::MouseEvent& e) override
     {
-        if (dragging || e.getDistanceFromDragStart() < 6 || ! makeFile) return;
+        if (e.mods.isPopupMenu() || dragging || e.getDistanceFromDragStart() < 6 || ! makeFile) return;
         const auto f = makeFile();
         if (! f.existsAsFile()) return;
         dragging = true;
         juce::DragAndDropContainer::performExternalDragDropOfFiles ({ f.getFullPathName() }, false, this,
-                                                                     [this] { dragging = false; });
+                                                                     [this] { dragging = false; if (onDropped) onDropped(); });
     }
 
     void mouseUp (const juce::MouseEvent&) override { dragging = false; }

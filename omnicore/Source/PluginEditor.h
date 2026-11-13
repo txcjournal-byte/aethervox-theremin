@@ -88,6 +88,8 @@ private:
     LiveTake take;
     bool ledDrag = false, dragging = false;
     juce::File writeTake();
+    void showTakeMenu();
+    bool wasHostPlaying = false;
 
     // led
     juce::String led1, led2; double ledUntil = 0.0;

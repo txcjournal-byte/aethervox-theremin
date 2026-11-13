@@ -49,6 +49,15 @@ public:
     /** Host transport (written by audio thread): recorded hand automation only sounds while the host plays. */
     std::atomic<bool>   hostPlaying { false };
     std::atomic<double> hostBpm     { 120.0 };
+    /** Song position (quarter notes) at the last audio block + when it was taken, for the synced MIDI take. */
+    std::atomic<double> songPpq     { -1.0 };
+    std::atomic<double> songStampMs { 0.0 };
+    double songPpqNow() const
+    {
+        const double q = songPpq.load();
+        if (! hostPlaying.load() || q < 0.0) return -1.0;
+        return q + (juce::Time::getMillisecondCounterHiRes() - songStampMs.load()) * 0.001 * hostBpm.load() / 60.0;
+    }
 
     enum class Source { Idle = 0, Pad, Midi, CC };
     /** Display state (written by audio thread). */
