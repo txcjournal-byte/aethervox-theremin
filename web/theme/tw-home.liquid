@@ -51,6 +51,9 @@
     .tg-obj{scroll-snap-align:center}
     .tg-room img{transition:none}
   }
+  .tg-row .twc{display:inline-flex;flex-direction:column;line-height:1.05;margin-right:4px}
+  html body .tg-row .twc s:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:14px!important;color:rgba(255,255,255,.6)!important}
+  html body .tg-row .twc small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:10px!important;color:rgba(255,255,255,.5)!important}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,600..800&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
 {%- liquid
@@ -127,6 +130,11 @@
               <h2 class="tg-name tgd"><a href="{{ pr.url }}">{{ nm }}</a></h2>
               <p class="tg-schema">{{ kname }}.{% if fact != '' %} {{ fact }}{% endif %} VST3, AU, standalone.</p>
               <div class="tg-row">
+                {%- case pr.handle -%}
+                  {%- when 'omnicore-3000' -%}{%- render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'Omnichord hardware' -%}
+                  {%- when 'alpine-theremin' -%}{%- render 'tw-compare', usd: '$899', eur: '999 €', czk: '≈ 25 000 Kč', label: 'Moog theremin hardware' -%}
+                  {%- when 'trapwin-vice-boss' -%}{%- render 'tw-compare', usd: '$899', eur: '958 €', czk: '≈ 24 000 Kč', label: 'Eventide H90 hardware' -%}
+                {%- endcase -%}
                 <span class="tg-price">{{ pr.price | money_without_trailing_zeros }}</span>
                 {%- if pr.tags contains 'coming-soon' -%}<span class="tg-b tg-off">Coming soon</span>{%- else -%}
                 {%- if vw -%}<a class="tg-b tg-buy" href="/cart/{{ vw.id }}:1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l8-1v7.5H3zm9-1.2L21 2.5v9H12zM3 12.5h8V20l-8-1zm9 0h9v9l-9-1.3z"/></svg>Windows</a>{%- endif -%}

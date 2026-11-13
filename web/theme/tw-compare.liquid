@@ -1,0 +1,14 @@
+{%- comment -%}
+  What the hardware original costs, in the shopper's currency, struck through, with its name.
+  Usage: render 'tw-compare', usd: '$999', eur: '799 €', czk: '≈ 20 000 Kč', label: 'Suzuki Omnichord OM-108'
+{%- endcomment -%}
+{%- liquid
+  assign hp = usd
+  case cart.currency.iso_code
+    when 'CZK'
+      assign hp = czk
+    when 'EUR'
+      assign hp = eur
+  endcase
+-%}
+<span class="twc"><s>{{ hp }}</s> <small>{{ label }}</small></span>
