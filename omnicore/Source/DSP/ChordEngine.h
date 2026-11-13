@@ -81,7 +81,7 @@ public:
         const bool holdOff = set.hold && ! s.hold;
         const bool bassChanged = set.bass != s.bass;
         set = s;
-        if (modeChanged) { releasePad (synth); arpRelease (synth); releaseArpBass (synth); keyChords.clear(); }
+        if (modeChanged) { releasePad (synth); arpRelease (synth); releaseArpBass (synth); keyChords.clear(); stabbing = false; }
         // HOLD switched off with nothing pressed: let the latched chord go
         if (holdOff && buttonsDown == 0 && heldKeys.empty()) releaseChord (synth);
         // BASS switched while a chord rings: add / remove the root right away
@@ -209,11 +209,12 @@ public:
     {
         int done = 0;
         const double spb = 60.0 / std::max (20.0, bpm) * fs;            // samples per beat
-        const double stepBeats = rateBeats (set.arpRate);
+        const bool stabs = set.mode == PlayMode::Chord && stabbing;
+        const double stepBeats = rateBeats (set.arpRate) * (stabs ? 2.0 : 1.0);
         const double stepSamples = spb * stepBeats;
 
         // host-synced arp: align the next step to the bar grid
-        if (set.mode == PlayMode::Arp && ppq >= 0.0 && chordRoot >= 0)
+        if ((set.mode == PlayMode::Arp || stabs) && ppq >= 0.0 && chordRoot >= 0)
         {
             const double steps = ppq / stepBeats;
             double frac = std::ceil (steps - 1.0e-9) - steps;
@@ -228,7 +229,7 @@ public:
             // next pending event
             for (const auto& e : pending) seg = (int) std::min<int64_t> (seg, std::max<int64_t> (0, e.at - clock));
             // next arp step
-            const bool arpOn = set.mode == PlayMode::Arp && chordRoot >= 0;
+            const bool arpOn = (set.mode == PlayMode::Arp || stabs) && chordRoot >= 0;
             if (arpOn) seg = std::min (seg, std::max (0, (int) std::ceil (samplesToStep)));
 
             if (seg > 0)
@@ -260,11 +261,11 @@ public:
     void allOff (OmniSynth& s)
     {
         pending.clear(); keyChords.clear(); padNotes.clear(); heldKeys.clear(); buttonsDown = 0;
-        chordRoot = -1; arpBassNote = -1; s.allNotesOff();
+        chordRoot = -1; arpBassNote = -1; stabbing = false; s.allNotesOff();
     }
 
 private:
-    struct Ev { int64_t at; int note; bool on; float vel; };
+    struct Ev { int64_t at; int note; bool on; float vel; bool arp = false; };
 
     double fs = 48000.0;
     ChordSettings set;
@@ -275,6 +276,7 @@ private:
     int chordRoot = -1, chordType = 0, buttonsDown = 0, lastStrumString = -1;
     int arpIdx = 0, arpDir = 1; double samplesToStep = 0.0; uint32_t rnd = 12345;
     int lastRoot = 0, lastType = 0, arpBassNote = -1; int64_t lastArpClock = -1;
+    bool stabbing = false;
 
     void updateArpBass (OmniSynth& s, float vel)
     {
@@ -293,7 +295,7 @@ private:
         return b[clampv (r, 0, 5)];
     }
 
-    void schedule (int64_t at, int note, bool on, float vel) { pending.push_back ({ at, note, on, vel }); }
+    void schedule (int64_t at, int note, bool on, float vel, bool arp = false) { pending.push_back ({ at, note, on, vel, arp }); }
 
     /** Voiced chord: tones folded into a warm window around the anchor, + optional bass. */
     std::vector<int> voicing (int pc, int type, int anchor) const
@@ -334,7 +336,11 @@ private:
                     for (int n : v) s.noteOn (n, vel * 0.85f);
                     keyChords[keyNote] = v;
                 }
-                else if (keyNote < 0) playPad (s, pc, type, 60, vel);
+                else if (keyNote < 0)
+                {
+                    // CHORD mode chord buttons: rhythmic chord stabs locked to the tempo (Omnichord rhythm)
+                    if (! stabbing || changed) { stabbing = true; if (fresh) samplesToStep = 0.0; }
+                }
                 break;
             }
             case PlayMode::Strum:
@@ -373,7 +379,7 @@ private:
     void releaseChord (OmniSynth& s)
     {
         releasePad (s); arpRelease (s); releaseArpBass (s);
-        chordRoot = -1;
+        chordRoot = -1; stabbing = false;
     }
 
     void buildArp()
@@ -388,12 +394,22 @@ private:
 
     void arpRelease (OmniSynth& s)
     {
+        // only the arp's own notes stop now; strummed strings ring out and end on their own
+        // (dropping their scheduled note-offs used to leave late strings sounding forever)
         for (auto it = pending.begin(); it != pending.end();)
-            if (! it->on) { s.noteOff (it->note); it = pending.erase (it); } else ++it;
+            if (it->arp) { if (! it->on) s.noteOff (it->note); it = pending.erase (it); } else ++it;
     }
 
     void arpFire (OmniSynth& s, double stepSamples)
     {
+        if (set.mode == PlayMode::Chord)
+        {
+            const auto v = voicing (chordRoot, chordType, 60);
+            const float acc = (arpIdx++ % 2 == 0) ? 0.95f : 0.7f;
+            const int64_t off = clock + std::max<int64_t> (1, (int64_t) (stepSamples * 0.55));
+            for (int n : v) { s.noteOn (n, acc * 0.85f); schedule (off, n, false, 0.0f, true); }
+            return;
+        }
         buildArp();
         if (arpNotes.empty()) return;
         const int cnt = (int) arpNotes.size();
@@ -414,7 +430,7 @@ private:
         const int note = arpNotes[(size_t) idx];
         const float accent = (arpIdx % 4 == 1) ? 0.95f : 0.72f;
         s.noteOn (note, accent);
-        schedule (clock + std::max<int64_t> (1, (int64_t) (stepSamples * clampv (set.arpGate, 0.05f, 1.0f))), note, false, 0.0f);
+        schedule (clock + std::max<int64_t> (1, (int64_t) (stepSamples * clampv (set.arpGate, 0.05f, 1.0f))), note, false, 0.0f, true);
     }
 };
 } // namespace oc
