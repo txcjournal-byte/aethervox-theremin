@@ -48,7 +48,7 @@ private:
     void buildKeys();
     int keyAt (juce::Point<float> photoPos) const;
     // the window shows a close crop of the photo, so the keys are big enough to read and hit
-    static constexpr float viewX = 160.0f, viewY = 130.0f, viewW = 934.0f;
+    static constexpr float viewX = 0.0f, viewY = 0.0f, viewW = 1254.0f;
     juce::Point<float> toPhoto (juce::Point<float> p) const { return p / scale() + juce::Point<float> (viewX, viewY); }
     juce::Rectangle<int> toScreen (juce::Rectangle<float> r) const
     { return ((r - juce::Point<float> (viewX, viewY)) * scale()).getSmallestIntegerContainer().expanded (2); }

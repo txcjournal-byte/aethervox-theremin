@@ -49,7 +49,7 @@ OmniEditor::OmniEditor (OmniProcessor& p) : AudioProcessorEditor (p), proc (p)
     setResizable (true, true);
     getConstrainer()->setFixedAspectRatio (1.0);
     setResizeLimits (520, 520, 1254, 1254);
-    setSize (660, 660);
+    setSize (780, 780);
     setWantsKeyboardFocus (true);
     startTimerHz (25);
     showLed ("OMNICORE 3000", OmniProcessor::presetName (proc.currentPreset.load()));
