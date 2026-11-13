@@ -209,6 +209,11 @@ public:
     /** Renders voices + FX for n samples (stereo, overwrite). */
     void render (float* L, float* R, int n);
 
+    /** Every note the synth starts or stops, stamped with the sample clock (for MIDI out / live takes).
+        Single-threaded (audio); the owner reads and resets logCount after each block. */
+    struct NoteLog { int64_t clock; int note; float vel; bool on; };
+    std::array<NoteLog, 1024> noteLog {}; int logCount = 0; int64_t clock = 0;
+
     /** For the display: recent mono output (ring buffer of 512) and peak. */
     std::array<float, 512> scope {}; int scopePos = 0;
     float peak = 0.0f;

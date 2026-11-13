@@ -90,7 +90,7 @@ inline AudioProcessorValueTreeState::ParameterLayout createLayout()
     // --- play
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { PID::mode, 1 }, "Play Mode", modeNames, 1));
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { PID::chordType, 1 }, "Key Chord Type", chordTypeNames, 0));
-    l.add (std::make_unique<AudioParameterBool>   (ParameterID { PID::bass, 1 }, "Bass Note", true));
+    l.add (std::make_unique<AudioParameterBool>   (ParameterID { PID::bass, 1 }, "Bass Note", false));
     l.add (std::make_unique<AudioParameterBool>   (ParameterID { PID::hold, 1 }, "Chord Hold", false));
     f (PID::strumMs, "Strum Speed", skew (5.0f, 120.0f, 30.0f), 28.0f, AudioParameterFloatAttributes().withLabel ("ms"));
     f (PID::pluck,   "Pluck Length", skew (0.05f, 2.0f, 0.4f), 0.35f, sec);

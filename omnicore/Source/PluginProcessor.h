@@ -29,7 +29,7 @@ public:
 
     const juce::String getName() const override { return "OmniCore 3000"; }
     bool acceptsMidi() const override { return true; }
-    bool producesMidi() const override { return false; }
+    bool producesMidi() const override { return true; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 6.0; }
 
@@ -65,6 +65,13 @@ public:
     std::array<std::atomic<float>, 128> dispScope {};
     std::atomic<double> dispBpm { 120.0 };
 
+    /** Live take feed: every note the pyramid plays (mouse, MIDI, chords, strum, arp),
+        stamped with seconds and, while the host plays, with the song position in quarter notes. */
+    struct TakeEvent { double sec, ppq; int note; float vel; bool on; };
+    juce::AbstractFifo takeFifo { 4096 };
+    std::array<TakeEvent, 4096> takeBuf {};
+    std::atomic<bool> hostPlaying { false };
+
     /** Notes that sound right now (for lighting the keys). */
     std::array<std::atomic<bool>, 128> noteLit {};
 
@@ -72,6 +79,8 @@ private:
     oc::OmniSynth synth;
     oc::ChordEngine chords;
     std::vector<float> scratchR;
+    int64_t samplesSeen = 0;
+    juce::MidiBuffer outMidi;
 
     void pushParams();
     void handle (const juce::MidiMessage&);

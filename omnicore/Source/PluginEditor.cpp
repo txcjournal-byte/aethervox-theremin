@@ -46,9 +46,10 @@ OmniEditor::OmniEditor (OmniProcessor& p) : AudioProcessorEditor (p), proc (p)
 
     setResizable (true, true);
     getConstrainer()->setFixedAspectRatio (1.0);
-    setResizeLimits (480, 480, 1254, 1254);
-    setSize (760, 760);
-    startTimerHz (40);
+    setResizeLimits (520, 520, 1254, 1254);
+    setSize (900, 900);
+    setWantsKeyboardFocus (true);
+    startTimerHz (30);
     showLed ("OMNICORE 3000", OmniProcessor::presetName (proc.currentPreset.load()));
 }
 
@@ -81,6 +82,70 @@ void OmniEditor::buildKeys()
     keys.push_back ({ R (495, 888, 762, 912), KeyKind::StrumHigh, 0, 0, "STRUM" });
     keys.push_back ({ R (766, 887, 827, 912), KeyKind::PresetUp, 0, 0, "PRESET +" });
     keys.push_back ({ R (490, 927, 763, 951), KeyKind::Strum, 0, 0, "STRUM" });
+}
+
+void OmniEditor::resized()
+{
+    const int w = jmax (1, getWidth()), h = jmax (1, getHeight());
+    photoScaled = photo.getClippedImage (Rectangle<int> ((int) viewX, (int) viewY, (int) viewW, (int) viewW))
+                       .rescaled (w, h, Graphics::highResamplingQuality);
+    repaint();
+}
+
+int OmniEditor::keyForCode (int code) const
+{
+    if (code >= 'A' && code <= 'Z') code = code - 'A' + 'a';
+    const String row1 = "1234567890", row2 = "qweryuiop", row3 = "asdfghjkl", row4 = "zxcvbnm";
+    if (row1.containsChar ((juce_wchar) code)) return row1.indexOfChar ((juce_wchar) code);
+    if (row2.containsChar ((juce_wchar) code)) return 10 + row2.indexOfChar ((juce_wchar) code);
+    if (row3.containsChar ((juce_wchar) code)) return 19 + row3.indexOfChar ((juce_wchar) code);
+    if (code == KeyPress::returnKey) return 28;
+    if (row4.containsChar ((juce_wchar) code)) return 29 + row4.indexOfChar ((juce_wchar) code);
+    if (code == ',' || code == '.' || code == ';' || code == ':') return 36;
+    if (code == KeyPress::leftKey || code == '[') return 37;
+    if (code == KeyPress::rightKey || code == ']') return 39;
+    return -1;
+}
+
+String OmniEditor::keyLetter (int idx) const
+{
+    const String row1 = "1234567890", row2 = "QWERYUIOP", row3 = "ASDFGHJKL", row4 = "ZXCVBNM";
+    if (idx < 10) return row1.substring (idx, idx + 1);
+    if (idx < 19) return row2.substring (idx - 10, idx - 9);
+    if (idx < 28) return row3.substring (idx - 19, idx - 18);
+    if (idx == 28) return "ENTER";
+    if (idx < 36) return row4.substring (idx - 29, idx - 28);
+    if (idx == 36) return ",";
+    if (idx == 37) return "<-";
+    if (idx == 39) return "->";
+    if (idx == 40 || idx == 38) return "SPACE";
+    return {};
+}
+
+void OmniEditor::toggleArp (bool forceOn)
+{
+    const int mode = roundToInt (proc.apvts.getRawParameterValue (PID::mode)->load());
+    auto setHold = [this] (bool on)
+    {
+        auto* prm = proc.apvts.getParameter (PID::hold);
+        prm->beginChangeGesture(); prm->setValueNotifyingHost (on ? 1.0f : 0.0f); prm->endChangeGesture();
+    };
+    if (mode == 3 && ! forceOn)
+    {
+        setChoice (PID::mode, modeBeforeArp == 3 ? 1 : modeBeforeArp);
+        setHold (holdBeforeArp);
+        showLed ("ARP OFF", Params::modeNames[modeBeforeArp == 3 ? 1 : modeBeforeArp]);
+        return;
+    }
+    if (mode != 3)
+    {
+        modeBeforeArp = mode;
+        holdBeforeArp = proc.apvts.getRawParameterValue (PID::hold)->load() > 0.5f;
+        setChoice (PID::mode, 3);
+        setHold (true);   // the arp keeps running after you let go; press the chord again to stop it
+    }
+    const int r = roundToInt (proc.apvts.getRawParameterValue (PID::arpRate)->load());
+    showLed ("ARP ON", String (Params::arpRateNames[r]) + "   PRESS CHORD AGAIN = STOP");
 }
 
 int OmniEditor::keyAt (Point<float> p) const
@@ -159,6 +224,7 @@ void OmniEditor::pressKey (int idx, Point<float> pp)
             showLed (String (oc::ChordEngine::pcName (k.b)) + (k.a == 1 ? "m" : k.a == 2 ? "7" : ""), {});
             break;
         case KeyKind::Mode:
+            if (k.a == 3) { toggleArp (false); break; }
             setChoice (PID::mode, k.a); showLed ("MODE", k.name); break;
         case KeyKind::Hold:
         {
@@ -172,10 +238,11 @@ void OmniEditor::pressKey (int idx, Point<float> pp)
             auto* prm = proc.apvts.getParameter (PID::bass);
             const bool on = prm->getValue() < 0.5f;
             prm->beginChangeGesture(); prm->setValueNotifyingHost (on ? 1.0f : 0.0f); prm->endChangeGesture();
-            showLed ("BASS", on ? "ON" : "OFF"); break;
+            showLed ("BASS", on ? "ON  +ROOT LOW" : "OFF"); break;
         }
         case KeyKind::ArpRate:
         {
+            if (roundToInt (proc.apvts.getRawParameterValue (PID::mode)->load()) != 3) { toggleArp (true); break; }
             const int r = (roundToInt (proc.apvts.getRawParameterValue (PID::arpRate)->load()) + 1) % Params::arpRateNames.size();
             setChoice (PID::arpRate, r); showLed ("ARP RATE", Params::arpRateNames[r]); break;
         }
@@ -212,7 +279,15 @@ void OmniEditor::releaseKey()
 
 void OmniEditor::mouseDown (const MouseEvent& e)
 {
+    grabKeyboardFocus();
     const auto pp = toPhoto (e.position);
+    if (ledBox.contains (pp))
+    {
+        ledDrag = true;
+        showLed (take.isEmpty() ? "PLAY FIRST" : "DRAG ME", take.isEmpty() ? "THEN DRAG THIS INTO THE PIANO ROLL"
+                                                                          : String (take.countNotes()) + " NOTES > PIANO ROLL");
+        return;
+    }
     if (almond (eyeBox).contains (pp))
     {
         proc.mutate(); flash = 1.0f;
@@ -226,6 +301,15 @@ void OmniEditor::mouseDown (const MouseEvent& e)
 void OmniEditor::mouseDrag (const MouseEvent& e)
 {
     const auto pp = toPhoto (e.position);
+    if (ledDrag)
+    {
+        if (dragging || e.getDistanceFromDragStart() < 6) return;
+        const auto f = writeTake();
+        if (! f.existsAsFile()) return;
+        dragging = true;
+        DragAndDropContainer::performExternalDragDropOfFiles ({ f.getFullPathName() }, false, this, [this] { dragging = false; });
+        return;
+    }
     if (downKey >= 0)
     {
         auto& k = keys[(size_t) downKey];
@@ -246,11 +330,110 @@ void OmniEditor::mouseDrag (const MouseEvent& e)
     }
 }
 
-void OmniEditor::mouseUp (const MouseEvent&) { releaseKey(); }
+void OmniEditor::mouseUp (const MouseEvent&) { ledDrag = false; dragging = false; releaseKey(); }
+
+void OmniEditor::mouseMove (const MouseEvent& e)
+{
+    const auto pp = toPhoto (e.position);
+    const bool overLed = ledBox.contains (pp);
+    setMouseCursor (overLed && ! take.isEmpty() ? MouseCursor::DraggingHandCursor : MouseCursor::NormalCursor);
+    // hovering a key tells you what it does (and which computer key plays it)
+    const int i = keyAt (pp);
+    if (i != hoverKey)
+    {
+        hoverKey = i;
+        if (i >= 0)
+        {
+            const auto& k = keys[(size_t) i];
+            const String name = k.kind == KeyKind::Chord
+                ? String (oc::ChordEngine::pcName (k.b)) + (k.a == 1 ? "m" : k.a == 2 ? "7" : "")
+                : (k.kind == KeyKind::StrumHigh ? String ("STRUM HIGH") : k.name);
+            showLed (name, "KEY  " + keyLetter (i));
+        }
+    }
+}
+
+void OmniEditor::mouseExit (const MouseEvent&) { hoverKey = -1; }
+
+bool OmniEditor::keyPressed (const KeyPress& kp)
+{
+    const int code = kp.getKeyCode();
+    if (code == KeyPress::spaceKey)
+    {
+        proc.keyboardState.noteOn (OmniProcessor::stringChannel, kp.getModifiers().isShiftDown() ? 101 : 100, 0.85f);
+        proc.keyboardState.noteOff (OmniProcessor::stringChannel, kp.getModifiers().isShiftDown() ? 101 : 100, 0.0f);
+        for (auto& gl : stringGlow) gl = 1.0f;
+        return true;
+    }
+    if (kp.getModifiers().isCommandDown() || kp.getModifiers().isAltDown()) return false;
+    const int idx = keyForCode (code);
+    if (idx < 0) return false;
+    auto& k = keys[(size_t) idx];
+    if (k.kind == KeyKind::Chord)
+    {
+        if (kbHeld.count (code)) return true;          // auto-repeat
+        kbHeld[code] = idx;
+        proc.keyboardState.noteOn (OmniProcessor::chordChannel, k.a * 12 + k.b, 0.85f);
+        showLed (String (oc::ChordEngine::pcName (k.b)) + (k.a == 1 ? "m" : k.a == 2 ? "7" : ""), "KEY  " + keyLetter (idx));
+        return true;
+    }
+    if (kbHeld.count (code)) return true;
+    kbHeld[code] = -1;
+    const int saved = downKey;
+    pressKey (idx, k.r.getCentre());
+    downKey = saved;
+    return true;
+}
+
+bool OmniEditor::keyStateChanged (bool)
+{
+    bool any = false;
+    for (auto it = kbHeld.begin(); it != kbHeld.end();)
+    {
+        if (! KeyPress::isKeyCurrentlyDown (it->first))
+        {
+            if (it->second >= 0)
+            {
+                const auto& k = keys[(size_t) it->second];
+                proc.keyboardState.noteOff (OmniProcessor::chordChannel, k.a * 12 + k.b, 0.0f);
+            }
+            it = kbHeld.erase (it); any = true;
+        }
+        else ++it;
+    }
+    return any;
+}
+
+void OmniEditor::mouseDoubleClick (const MouseEvent& e)
+{
+    if (ledBox.contains (toPhoto (e.position))) { take.clear(); showLed ("MIDI TAKE", "CLEARED"); }
+}
+
+File OmniEditor::writeTake()
+{
+    auto f = File::getSpecialLocation (File::tempDirectory).getChildFile ("OmniCore 3000 take.mid");
+    if (! take.writeTo (f, proc.dispBpm.load())) f.deleteFile();
+    return f;
+}
 
 // -----------------------------------------------------------------------------
 void OmniEditor::timerCallback()
 {
+    // collect what the pyramid played since the last tick
+    {
+        const auto scope = proc.takeFifo.read (proc.takeFifo.getNumReady());
+        auto feed = [&] (int start, int size)
+        {
+            for (int i = 0; i < size; ++i)
+            {
+                const auto& e = proc.takeBuf[(size_t) (start + i)];
+                take.add ({ e.sec, e.ppq, e.note, e.vel, e.on });
+            }
+        };
+        feed (scope.startIndex1, scope.blockSize1);
+        feed (scope.startIndex2, scope.blockSize2);
+    }
+
     // eye: gaze follows the mouse anywhere on the screen, glow follows the sound
     const auto m = toPhoto (getLocalPoint (nullptr, Desktop::getMousePosition().toFloat()));
     auto d = m - eyeBox.getCentre();
@@ -262,15 +445,18 @@ void OmniEditor::timerCallback()
     for (auto& gl : stringGlow) gl *= 0.86f;
 
     for (size_t i = 0; i < keys.size(); ++i) litCache[i] = isLit (keys[i]);
-    repaint();
+    // only the eye (with its glow) and the keyboard + LED change: repaint just those
+    const auto c = eyeBox.getCentre();
+    repaint (toScreen ({ c.x - 340.0f, c.y - 240.0f, 680.0f, 480.0f }));
+    repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 300.0f }));
 }
 
 void OmniEditor::paint (Graphics& g)
 {
     const float s = scale();
-    g.addTransform (AffineTransform::scale (s));
-    g.setImageResamplingQuality (Graphics::highResamplingQuality);
-    g.drawImageAt (photo, 0, 0);
+    if (photoScaled.isValid()) g.drawImageAt (photoScaled, 0, 0);
+    g.addTransform (AffineTransform::translation (-viewX, -viewY).scaled (s));
+    g.setImageResamplingQuality (Graphics::mediumResamplingQuality);
 
     // ---------------------------------------------------------------- the eye
     {
@@ -344,6 +530,9 @@ void OmniEditor::paint (Graphics& g)
             a = root < 0 ? String ("--") : String (oc::ChordEngine::pcName (root)) + oc::ChordEngine::typeName (proc.dispType.load());
             b = Params::modeNames[roundToInt (proc.apvts.getRawParameterValue (PID::mode)->load())] + "   "
               + OmniProcessor::presetName (proc.currentPreset.load());
+            const bool hint = ! take.isEmpty() && ! take.isSounding()
+                              && std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5;
+            if (hint) b = "DRAG ME > MIDI   " + String (take.countNotes()) + " NOTES";
         }
         const Font big (FontOptions (Font::getDefaultMonospacedFontName(), 24.0f, Font::bold));
         const Font small (FontOptions (Font::getDefaultMonospacedFontName(), 14.0f, Font::bold));

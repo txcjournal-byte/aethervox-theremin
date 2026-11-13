@@ -27,7 +27,7 @@ struct ChordSettings
 {
     PlayMode mode = PlayMode::Chord;
     int   chordType = 0;     // 0 Maj, 1 min, 2 7, 3 maj7, 4 min7, 5 sus4, 6 add9, 7 dim
-    bool  bass = true;       // add a root an octave below the pad
+    bool  bass = false;      // add a root an octave below the pad
     bool  hold = false;      // chords latch until the next chord
     float strumMs = 28.0f;   // time between strings when auto-strumming
     int   arpRate = 3;       // 0 1/4, 1 1/8, 2 1/8T, 3 1/16, 4 1/16T, 5 1/32
@@ -78,8 +78,18 @@ public:
     void setSettings (OmniSynth& synth, const ChordSettings& s)
     {
         const bool modeChanged = s.mode != set.mode;
+        const bool holdOff = set.hold && ! s.hold;
+        const bool bassChanged = set.bass != s.bass;
         set = s;
-        if (modeChanged) { releasePad (synth); arpRelease (synth); keyChords.clear(); }
+        if (modeChanged) { releasePad (synth); arpRelease (synth); releaseArpBass (synth); keyChords.clear(); }
+        // HOLD switched off with nothing pressed: let the latched chord go
+        if (holdOff && buttonsDown == 0 && heldKeys.empty()) releaseChord (synth);
+        // BASS switched while a chord rings: add / remove the root right away
+        if (bassChanged && chordRoot >= 0 && ! modeChanged)
+        {
+            if (! padNotes.empty()) playPad (synth, chordRoot, chordType, 60, 0.8f);
+            if (set.mode == PlayMode::Arp) updateArpBass (synth, 0.8f);
+        }
     }
     const ChordSettings& settings() const { return set; }
 
@@ -127,6 +137,13 @@ public:
     void chordButton (OmniSynth& s, int row, int pc, bool on, float vel = 0.85f)
     {
         const int type = row == 1 ? 1 : (row == 2 ? 2 : 0);
+        // with HOLD on, pressing the latched chord again switches it off
+        if (on && set.hold && buttonsDown == 0 && heldKeys.empty() && chordRoot == pc && chordType == type
+            && set.mode != PlayMode::Strum)
+        {
+            releaseChord (s);
+            return;
+        }
         if (on)
         {
             ++buttonsDown;
@@ -142,11 +159,34 @@ public:
 
     void strum (OmniSynth& s, int string, float vel)
     {
-        if (chordRoot < 0) return;
-        const int note = stringNote (string);
+        const int note = stringNoteOrLast (string);
         s.noteOn (note, vel);
         schedule (clock + (int64_t) (set.pluck * fs), note, false, vel);
         lastStrumString = string;
+    }
+
+    /** A whole swipe across the plate (space bar): every string, strumMs apart. */
+    void strumSweep (OmniSynth& s, bool up, float vel)
+    {
+        for (int k = 0; k < numStrings; ++k)
+        {
+            const int str = up ? k : numStrings - 1 - k;
+            const int note = stringNoteOrLast (str);
+            const int64_t t = clock + (int64_t) (k * std::max (8.0f, set.strumMs) * 0.001 * fs);
+            schedule (t, note, true, vel * (0.8f + 0.2f * (float) k / numStrings));
+            schedule (t + (int64_t) (set.pluck * fs * 1.4), note, false, 0.0f);
+        }
+    }
+
+    /** Strings follow the held chord, or the last chord played (C major before the first one). */
+    int stringNoteOrLast (int k)
+    {
+        if (chordRoot >= 0) return stringNote (k);
+        const int r = chordRoot, t = chordType;
+        chordRoot = lastRoot; chordType = lastType;
+        const int n = stringNote (k);
+        chordRoot = r; chordType = t;
+        return n;
     }
 
     /** Note the k-th sonic string plays for the current chord (rising chord tones from G3). */
@@ -177,6 +217,8 @@ public:
             const double steps = ppq / stepBeats;
             double frac = std::ceil (steps - 1.0e-9) - steps;
             samplesToStep = frac * stepSamples;
+            // the step on this grid line already fired at the end of the previous block
+            if (samplesToStep < 1.0 && lastArpClock == clock) samplesToStep += stepSamples;
         }
 
         while (done < n)
@@ -208,6 +250,7 @@ public:
             if (arpOn && samplesToStep <= 0.0)
             {
                 arpFire (s, stepSamples);
+                lastArpClock = clock;
                 samplesToStep += stepSamples;
             }
         }
@@ -216,7 +259,7 @@ public:
     void allOff (OmniSynth& s)
     {
         pending.clear(); keyChords.clear(); padNotes.clear(); heldKeys.clear(); buttonsDown = 0;
-        chordRoot = -1; s.allNotesOff();
+        chordRoot = -1; arpBassNote = -1; s.allNotesOff();
     }
 
 private:
@@ -230,6 +273,17 @@ private:
     std::map<int, std::vector<int>> keyChords;
     int chordRoot = -1, chordType = 0, buttonsDown = 0, lastStrumString = -1;
     int arpIdx = 0, arpDir = 1; double samplesToStep = 0.0; uint32_t rnd = 12345;
+    int lastRoot = 0, lastType = 0, arpBassNote = -1; int64_t lastArpClock = -1;
+
+    void updateArpBass (OmniSynth& s, float vel)
+    {
+        const int want = (set.bass && chordRoot >= 0) ? 36 + chordRoot : -1;
+        if (want == arpBassNote) return;
+        if (arpBassNote >= 0) s.noteOff (arpBassNote);
+        arpBassNote = want;
+        if (want >= 0) s.noteOn (want, vel);
+    }
+    void releaseArpBass (OmniSynth& s) { if (arpBassNote >= 0) s.noteOff (arpBassNote); arpBassNote = -1; }
 
     static double rateBeats (int r)
     {
@@ -261,6 +315,7 @@ private:
     {
         const bool changed = pc != chordRoot || type != chordType;
         chordRoot = pc; chordType = type;
+        lastRoot = pc; lastType = type;
         switch (set.mode)
         {
             case PlayMode::Notes:
@@ -296,6 +351,7 @@ private:
             {
                 buildArp();
                 if (fresh && changed) { arpIdx = 0; arpDir = 1; }
+                updateArpBass (s, vel * 0.8f);
                 break;
             }
         }
@@ -313,7 +369,7 @@ private:
 
     void releaseChord (OmniSynth& s)
     {
-        releasePad (s); arpRelease (s);
+        releasePad (s); arpRelease (s); releaseArpBass (s);
         chordRoot = -1;
     }
 

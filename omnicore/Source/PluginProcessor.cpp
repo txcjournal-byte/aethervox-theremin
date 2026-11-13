@@ -104,7 +104,8 @@ void OmniProcessor::handle (const MidiMessage& m)
         }
         else if (ch == stringChannel)
         {
-            if (on) chords.strum (synth, note, vel);
+            if (on && note >= 100) chords.strumSweep (synth, note == 100, jmax (0.5f, vel));
+            else if (on) chords.strum (synth, note, vel);
         }
         else chords.key (synth, note, vel, on);
     }
@@ -126,7 +127,9 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
             if (pos->getIsPlaying()) if (auto q = pos->getPpqPosition()) ppq = *q;
         }
     dispBpm.store (bpm);
+    hostPlaying.store (ppq >= 0.0);
     pushParams();
+    const int64_t clock0 = synth.clock;
 
     // on-screen keys / chord buttons / strings join the incoming MIDI
     keyboardState.processNextMidiBuffer (midi, 0, n, true);
@@ -147,6 +150,26 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
         handle (meta.getMessage());
     }
     if (pos < n) chords.render (synth, L + pos, R + pos, n - pos, bpm, ppq < 0.0 ? -1.0 : ppq + pos * beatsPerSample);
+
+    // --- what was played: MIDI out (hosts can record it) + the live take for DRAG MIDI
+    outMidi.clear();
+    {
+        const double fs = getSampleRate();
+        for (int i = 0; i < synth.logCount; ++i)
+        {
+            const auto& e = synth.noteLog[(size_t) i];
+            const int off = (int) jlimit<int64_t> (0, n - 1, e.clock - clock0);
+            const auto vel = (uint8) jlimit (1, 127, roundToInt (e.vel * 127.0f));
+            outMidi.addEvent (e.on ? MidiMessage::noteOn (1, e.note, vel) : MidiMessage::noteOff (1, e.note), off);
+            const auto scope = takeFifo.write (1);
+            if (scope.blockSize1 > 0)
+                takeBuf[(size_t) scope.startIndex1] = { (double) (samplesSeen + off) / fs,
+                                                        ppq < 0.0 ? -1.0 : ppq + off * beatsPerSample, e.note, e.vel, e.on };
+        }
+        synth.logCount = 0;
+    }
+    samplesSeen += n;
+    midi.swapWith (outMidi);
 
     if (buffer.getNumChannels() == 1) { FloatVectorOperations::add (L, R, n); FloatVectorOperations::multiply (L, 0.5f, n); }
     for (int c = 2; c < buffer.getNumChannels(); ++c) buffer.clear (c, 0, n);

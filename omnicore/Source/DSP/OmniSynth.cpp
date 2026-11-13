@@ -294,6 +294,7 @@ void OmniSynth::prepare (double sampleRate, int maxBlock)
 
 void OmniSynth::noteOn (int note, float velocity)
 {
+    if (logCount < (int) noteLog.size()) noteLog[(size_t) logCount++] = { clock, note, velocity, true };
     // same note still sounding -> retrigger that voice
     Voice* v = nullptr;
     for (auto& vc : voices) if (vc.note == note && vc.active()) { v = &vc; break; }
@@ -311,10 +312,18 @@ void OmniSynth::noteOn (int note, float velocity)
 
 void OmniSynth::noteOff (int note)
 {
+    bool held = false;
+    for (auto& vc : voices) if (vc.note == note && vc.held) held = true;
+    if (held && logCount < (int) noteLog.size()) noteLog[(size_t) logCount++] = { clock, note, 0.0f, false };
     for (auto& vc : voices) if (vc.note == note && vc.held) vc.stop();
 }
 
-void OmniSynth::allNotesOff() { for (auto& vc : voices) vc.stop(); }
+void OmniSynth::allNotesOff()
+{
+    for (auto& vc : voices)
+        if (vc.held && vc.note >= 0 && logCount < (int) noteLog.size()) noteLog[(size_t) logCount++] = { clock, vc.note, 0.0f, false };
+    for (auto& vc : voices) vc.stop();
+}
 
 void OmniSynth::render (float* L, float* R, int n)
 {
@@ -355,5 +364,6 @@ void OmniSynth::render (float* L, float* R, int n)
         if ((i & 3) == 0) { scope[(size_t) scopePos] = (L[i] + R[i]) * 0.5f; scopePos = (scopePos + 1) & 511; }
     }
     peak = std::max (pk, peak * 0.9f);
+    clock += n;
 }
 } // namespace oc
