@@ -3,6 +3,8 @@ on:
   push:
     paths: [ "web/video/vo/**" ]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   tts:
     runs-on: ubuntu-latest
@@ -13,5 +15,9 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y espeak-ng
       - run: pip install --extra-index-url https://download.pytorch.org/whl/cpu torch kokoro soundfile
       - run: mkdir out && python web/video/vo/tts.py am_fenrir,am_onyx,bm_george,am_michael
-      - uses: actions/upload-artifact@v4
-        with: { name: vo, path: out }
+      - name: Publish
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          cd out && zip -q ../vo.zip *.wav && cd ..
+          gh release delete vo-assets -y --cleanup-tag || true
+          gh release create vo-assets vo.zip --title "VO assets" --notes "voiceover" --prerelease
