@@ -126,6 +126,8 @@ private:
 
     int lead = 0;
     float timbreMod = -1.0f, polyGain = 1.0f;
+    // portamento across voices: a new note glides from the last note that sounded
+    float lastSoundMidi = 60.0f; int silentSamples = 1 << 30;
     float glideCoef = 1.0f, attackCoef = 1.0f, releaseCoef = 1.0f, vibOnsetCoef = 0.0f;
 
     LinearSmoother morph, brightness, outGain, layerAmt, subAmt;

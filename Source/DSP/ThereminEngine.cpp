@@ -127,14 +127,19 @@ void ThereminEngine::renderVoice (float* dest, int n)
         const float sa = subAmt.next();
         polyGain += (targetPolyGain - polyGain) * 0.0005f;
 
-        float sum = 0.0f;
+        float sum = 0.0f, loudest = 0.0f, loudMidi = lastSoundMidi;
         for (auto& vc : voices)
         {
             if (vc.idle()) continue;
 
-            // --- pitch glide (log domain); a voice starting from silence jumps
-            if (vc.env < 1.0e-4f || glideCoef >= 1.0f) vc.curMidi = vc.targetMidi;
-            else                                        vc.curMidi += (vc.targetMidi - vc.curMidi) * glideCoef;
+            // --- pitch glide (log domain). A voice starting from silence glides in from the
+            //     last note that sounded (portamento), unless nothing sounded recently.
+            if (glideCoef >= 1.0f)
+                vc.curMidi = vc.targetMidi;
+            else if (vc.env < 1.0e-4f)
+                vc.curMidi = (silentSamples < (int) (fs * 0.6)) ? lastSoundMidi : vc.targetMidi;
+            else
+                vc.curMidi += (vc.targetMidi - vc.curMidi) * glideCoef;
 
             // --- antenna response envelope
             vc.env += (vc.targetAmp - vc.env) * (vc.targetAmp > vc.env ? attackCoef : releaseCoef);
@@ -179,7 +184,10 @@ void ThereminEngine::renderVoice (float* dest, int n)
                                     - hum * 0.05f * (0.5f + 0.5f * ampN);
 
             sum += vc.dc.process (v * vc.env * trem * 0.5f);
+            if (vc.env > 0.02f && vc.env >= loudest) { loudest = vc.env; loudMidi = vc.curMidi; }
         }
+        if (loudest > 0.0f) { lastSoundMidi = loudMidi; silentSamples = 0; }
+        else if (silentSamples < (1 << 30)) ++silentSamples;
         dest[i] = sum * polyGain;
     }
 }

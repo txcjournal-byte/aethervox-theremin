@@ -116,10 +116,11 @@ public:
         for (int i = 0; i < n; ++i)
         {
             const float d    = drive.next();
-            const float g    = 1.0f + d * d * 24.0f;          // up to ~28 dB of drive
-            const float bias = 0.35f * d;                     // asymmetry -> even harmonics
+            const float g    = 1.0f + 60.0f * std::pow (d, 1.5f); // up to ~36 dB of drive, bites early
+            const float bias = 0.45f * d;                     // asymmetry -> even harmonics
             const float tb   = std::tanh (bias);
-            const float comp = 0.7f / (std::tanh (0.7f * g + bias) - tb);
+            // level compensation, but let a hard-driven tube get a little louder and grittier
+            const float comp = (0.7f + 0.35f * d) / (std::tanh (0.7f * g + bias) - tb);
 
             float a0, a1, b0, b1, b2, b3;
             stage1.up (x[i], a0, a1);
