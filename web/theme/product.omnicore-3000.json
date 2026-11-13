@@ -1,0 +1,8 @@
+{
+  "sections": {
+    "nav": {"type": "tw-navsec", "settings": {"mode": "nav"}},
+    "omni": {"type": "tw-omni", "settings": {}},
+    "legal": {"type": "tw-navsec", "settings": {"mode": "legal"}}
+  },
+  "order": ["nav", "omni", "legal"]
+}

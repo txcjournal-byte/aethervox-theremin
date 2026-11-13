@@ -1,0 +1,285 @@
+{%- liquid
+  assign p = product
+  if p == blank
+    assign p = all_products['omnicore-3000']
+  endif
+  assign vw = p.variants | where: 'title', 'Windows' | first
+  assign vm = p.variants | where: 'title', 'macOS' | first
+  assign price = p.price | money_without_trailing_zeros
+  assign cdn = 'https://cdn.shopify.com/s/files/1/1118/2489/6338/files/'
+-%}
+<style>
+  html body:has(.omx) .twp-pills{display:none!important}
+  html body:has(.omx) .header-wrapper:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h){background:#0a1226!important;border-bottom:1px solid rgba(255,42,26,.22)!important}
+  html body:has(.omx){background:#0a1226}
+  .omx{--sky:#0a1226;--deep:#050a18;--ink:#f2dcc4;--mute:rgba(242,220,196,.68);--red:#ff2a1a;--ember:#ff7a3d;background:var(--sky);color:var(--ink);overflow-x:clip}
+  .omx *{box-sizing:border-box}
+  .omx p{margin:0}
+  html body .omx .omd:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .omx .omd *:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Unbounded',Impact,sans-serif!important;text-transform:none!important;letter-spacing:-.02em!important}
+  html body .omx .omt:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .omx .omt *:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-family:'Instrument Sans',system-ui,sans-serif!important;text-transform:none!important;letter-spacing:normal!important}
+
+  /* 1 · into the eye */
+  .om-hero{position:relative;height:300vh;background:var(--deep)}
+  .om-hero .stk{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+  .om-hero .ph{position:absolute;inset:0;display:grid;place-items:center}
+  .om-hero .ph img{width:max(100vw,100vh);height:max(100vw,100vh);max-width:none;object-fit:cover;transform-origin:50.2% 35.8%;transform:scale(var(--z,1));will-change:transform}
+  .om-hero .burn{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,var(--red),#3a0603 70%);opacity:var(--bo,0);pointer-events:none}
+  .om-hero .t1{position:absolute;left:0;right:0;bottom:clamp(28px,9vh,90px);text-align:center;opacity:var(--t1,1);padding:0 20px}
+  html body .omx .om-hero .t1 p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:clamp(16px,1.4vw,20px)!important;color:var(--ink)!important}
+  .om-hero .t2{position:absolute;inset:0;display:grid;place-content:center;text-align:center;opacity:var(--t2,0);transform:scale(calc(1.25 - var(--t2,0) * .25));padding:0 20px}
+  html body .omx .om-hero .t2 h1:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;color:#fff3e4!important;font-weight:800!important;font-size:clamp(46px,9.5vw,170px)!important;line-height:.86!important}
+  html body .omx .om-hero .t2 p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin-top:18px!important;color:#ffe2cc!important;font-size:clamp(17px,1.6vw,22px)!important}
+
+  /* 2 · the keys */
+  .om-map{position:relative;height:520vh;background:var(--deep)}
+  .om-map .stk{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:grid;grid-template-columns:minmax(300px,40%) 1fr;align-items:center}
+  .om-map .cap{position:relative;padding:0 clamp(20px,4vw,64px);height:60vh}
+  .om-map .step{position:absolute;left:clamp(20px,4vw,64px);right:clamp(20px,4vw,64px);top:50%;transform:translateY(-40%);opacity:0;transition:opacity .45s ease,transform .45s ease}
+  .om-map .step.on{opacity:1;transform:translateY(-50%)}
+  html body .omx .om-map .step h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 16px!important;color:#fff3e4!important;font-weight:700!important;font-size:clamp(34px,3.8vw,64px)!important;line-height:.95!important}
+  html body .omx .om-map .step p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--mute)!important;font-size:18px!important;line-height:1.55!important;max-width:38ch}
+  html body .omx .om-map .step kbd:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:inline-block;padding:1px 8px;border-radius:5px;background:rgba(255,42,26,.16);color:#ffb59c!important;font-family:inherit!important;font-size:16px!important}
+  .om-map .vis{position:relative;height:100%;overflow:hidden}
+  .om-map .pic{position:absolute;width:min(132vh,62vw);aspect-ratio:1;left:50%;top:50%;transform:translate(-50%,-50%) translate(var(--px,0%),var(--py,0%)) scale(var(--ps,1));transition:transform .9s cubic-bezier(.2,.7,.1,1)}
+  .om-map .pic img{width:100%;height:100%;display:block}
+  .om-map .hot{position:absolute;border-radius:6px;box-shadow:0 0 0 2px var(--red),0 0 28px 4px rgba(255,42,26,.65);opacity:0;transition:opacity .5s ease;pointer-events:none}
+  .om-map .hot.on{opacity:1}
+  .om-map .hot.eye{border-radius:50%}
+
+  /* 3 · listen */
+  .om-snd{position:relative;min-height:100vh;display:grid;place-items:center;text-align:center;padding:12vh 20px;background:radial-gradient(60% 50% at 50% 60%,#1a1030,var(--sky))}
+  .om-snd canvas{position:absolute;inset:0;width:100%;height:100%}
+  .om-snd .in{position:relative;z-index:2}
+  html body .omx .om-snd h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 28px!important;color:#fff3e4!important;font-weight:700!important;font-size:clamp(40px,6vw,104px)!important;line-height:.9!important}
+  .om-play{width:132px;height:132px;border-radius:50%;border:0;background:var(--red);color:#fff;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 0 10px rgba(255,42,26,.18),0 0 60px rgba(255,42,26,.6);transition:transform .2s ease}
+  .om-play:hover{transform:scale(1.05)}
+  .om-play:focus-visible{outline:2px solid #fff3e4;outline-offset:6px}
+  .om-play svg{width:46px;height:46px;fill:currentColor}
+  .om-play .pa{display:none}.om-play.on .pl{display:none}.om-play.on .pa{display:block}
+  html body .omx .om-snd .lbl:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin-top:22px!important;color:var(--mute)!important;font-size:17px!important}
+
+  /* 4 · cosmos */
+  .om-cos{position:relative;height:360vh;background:var(--sky)}
+  .om-cos .stk{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2vh}
+  .om-cos .row{display:flex;gap:4vw;white-space:nowrap;will-change:transform;transform:translateX(var(--tx,0px))}
+  .om-cos .row span{font-family:'Unbounded',Impact,sans-serif;font-weight:800;font-size:clamp(48px,11vh,128px);line-height:1;color:transparent;-webkit-text-stroke:1.5px rgba(242,220,196,.32);transition:color .3s ease,-webkit-text-stroke-color .3s ease}
+  .om-cos .row span.on{color:var(--red);-webkit-text-stroke-color:var(--red);text-shadow:0 0 40px rgba(255,42,26,.55)}
+  .om-cos .say{position:absolute;left:clamp(20px,5vw,72px);bottom:clamp(28px,9vh,90px);max-width:44ch}
+  html body .omx .om-cos .say p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--ink)!important;font-size:clamp(17px,1.5vw,21px)!important;line-height:1.5!important}
+
+  /* 5 · presets */
+  .om-pre{max-width:1300px;margin:0 auto;padding:clamp(80px,13vh,150px) clamp(20px,5vw,72px)}
+  html body .omx .om-pre h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 12px!important;color:#fff3e4!important;font-weight:700!important;font-size:clamp(36px,4.6vw,76px)!important;line-height:.95!important}
+  html body .omx .om-pre .lead:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--mute)!important;font-size:18px!important;margin-bottom:5vh!important;max-width:52ch}
+  .om-pre ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,1fr);column-gap:clamp(24px,5vw,80px)}
+  .om-pre li{display:grid;grid-template-columns:auto 1fr;gap:4px 20px;align-items:baseline;padding:22px 0;border-top:1px solid rgba(242,220,196,.14)}
+  html body .omx .om-pre li b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){grid-row:span 2;font-family:'Unbounded',Impact,sans-serif!important;font-weight:800!important;font-size:20px!important;color:var(--red)!important;min-width:2ch}
+  html body .omx .om-pre li h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;color:#fff3e4!important;font-weight:700!important;font-size:clamp(22px,2vw,30px)!important}
+  html body .omx .om-pre li p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--mute)!important;font-size:16px!important;line-height:1.5!important}
+
+  /* 6 · buy */
+  .om-buy{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+  .om-buy>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;transform:scale(var(--bz,1.2))}
+  .om-buy::after{content:'';position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 60%,rgba(5,10,24,.8),rgba(5,10,24,.35))}
+  .om-buy .in{position:relative;z-index:2;padding:0 20px}
+  html body .omx .om-buy h2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;color:#fff3e4!important;font-weight:800!important;font-size:clamp(46px,8.4vw,150px)!important;line-height:.86!important}
+  html body .omx .om-buy .pr:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:20px 0 30px!important;color:var(--ink)!important;font-size:20px!important}
+  .om-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  html body .omx a.om-b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body .omx span.om-b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:inline-flex;align-items:center;justify-content:center;min-width:230px;height:56px;padding:0 26px;border-radius:999px;font-family:'Instrument Sans',system-ui,sans-serif!important;font-size:18px!important;font-weight:600!important;text-decoration:none!important}
+  html body .omx a.om-b1:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:var(--red)!important;color:#fff!important;box-shadow:0 0 40px rgba(255,42,26,.45)}
+  html body .omx a.om-b1:hover:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#d81c0e!important}
+  html body .omx .om-b2:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:rgba(242,220,196,.1)!important;color:#fff3e4!important;box-shadow:inset 0 0 0 1.5px rgba(242,220,196,.6);backdrop-filter:blur(8px)}
+  .omx a.om-b:focus-visible{outline:2px solid #fff3e4;outline-offset:3px}
+
+  .om-spec{max-width:1100px;margin:0 auto;padding:clamp(56px,9vh,100px) clamp(20px,5vw,72px);display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+  html body .omx .om-spec h4:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 8px!important;font-weight:700!important;font-size:20px!important;color:var(--red)!important}
+  html body .omx .om-spec p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--mute)!important;font-size:16px!important;line-height:1.55!important}
+
+  @media(max-width:860px){
+    .om-map .stk{grid-template-columns:1fr;grid-template-rows:56% 44%}
+    .om-map .vis{grid-row:1}
+    .om-map .cap{grid-row:2;height:100%}
+    .om-map .pic{width:min(96vw,56vh)}
+    .om-map .step{top:8%;transform:translateY(8px)}.om-map .step.on{transform:none}
+    .om-pre ol{grid-template-columns:1fr}
+    .om-spec{grid-template-columns:1fr}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .om-hero,.om-map,.om-cos{height:auto}
+    .om-hero .stk,.om-map .stk,.om-cos .stk{position:relative;height:100svh}
+    .om-hero .t1{display:none}.om-hero .t2{opacity:1;transform:none;background:rgba(5,10,24,.55)}
+    .om-map .step:first-child{opacity:1}
+    .om-cos .row{flex-wrap:wrap;white-space:normal;transform:none}
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+
+<div class="omx">
+  <section class="om-hero" aria-label="OmniCore 3000">
+    <div class="stk">
+      <div class="ph"><img src="{{ cdn }}omnicore-hero.jpg?width=1800" alt="A stone pyramid with a red cat eye above a red chord keyboard" fetchpriority="high"></div>
+      <div class="burn" aria-hidden="true"></div>
+      <div class="t1 omt"><p>Scroll. The eye is already watching.</p></div>
+      <div class="t2">
+        <h1 class="omd">OmniCore 3000</h1>
+        <p class="omt">Chords, strum and arp from a pyramid. Cosmic effects built in.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="om-map" aria-label="How you play it">
+    <div class="stk">
+      <div class="vis">
+        <div class="pic">
+          <img src="{{ cdn }}omnicore-gui.jpg?width=1600" alt="The OmniCore 3000 plugin window" loading="lazy">
+          <i class="hot" data-s="0" style="left:32.4%;top:58.2%;width:35.8%;height:11.6%"></i>
+          <i class="hot" data-s="1" style="left:38.6%;top:70.8%;width:29.2%;height:5.1%"></i>
+          <i class="hot" data-s="2" style="left:32.4%;top:67.5%;width:35.8%;height:3.1%"></i>
+          <i class="hot eye" data-s="3" style="left:37.5%;top:27.9%;width:25.5%;height:15.8%"></i>
+          <i class="hot" data-s="4" style="left:31.7%;top:55%;width:36.5%;height:2.8%"></i>
+        </div>
+      </div>
+      <div class="cap">
+        <div class="step on"><h2 class="omd">One key, one chord</h2><p class="omt">Three red rows: major, minor and seventh chords in ten keys. Press one and the whole chord plays.</p></div>
+        <div class="step"><h2 class="omd">Strum the air</h2><p class="omt">Drag across the long bar and the chord rings out string by string, like a harp. The upper bar plays an octave higher.</p></div>
+        <div class="step"><h2 class="omd">Four ways to play</h2><p class="omt">Notes, Chord, Strum or Arp, synced to your project tempo. <kbd>Hold</kbd> keeps the chord ringing. <kbd>Bass</kbd> adds the root an octave down.</p></div>
+        <div class="step"><h2 class="omd">Touch the eye</h2><p class="omt">It follows your mouse and pulses with the sound. Click it and the sound mutates into something new.</p></div>
+        <div class="step"><h2 class="omd">It tells you</h2><p class="omt">The red display shows the chord you hold, the mode and the preset. Arrows under it step through presets.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="om-snd" aria-label="Listen">
+    <canvas aria-hidden="true"></canvas>
+    <div class="in">
+      <h2 class="omd">Hear it</h2>
+      <button class="om-play" type="button" aria-label="Play the demo">
+        <svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="pa" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>
+      </button>
+      <p class="lbl omt">Pad, strum, arp and cosmos, straight out of the plugin.</p>
+      <audio preload="none" src="{{ cdn }}omnicore-demo.mp3"></audio>
+    </div>
+  </section>
+
+  <section class="om-cos" aria-label="Cosmic effects">
+    <div class="stk">
+      <div class="row" data-d="-1"><span>Shimmer</span><span>Warp</span><span>Orbit</span><span>Mutant</span><span>Shimmer</span><span>Warp</span></div>
+      <div class="row" data-d="1"><span>Tape</span><span>Crush</span><span>Echo</span><span>Space</span><span>Tape</span><span>Crush</span></div>
+      <div class="say omt"><p class="sx">Shimmer sends the reverb up an octave, so every chord leaves a halo.</p></div>
+    </div>
+  </section>
+
+  <section class="om-pre" aria-label="Presets">
+    <h2 class="omd">Eight rituals</h2>
+    <p class="lead omt">Every preset is a full sound with its effects. Step through them with the arrows on the pyramid.</p>
+    <ol class="omt">
+      <li><b>1</b><h3 class="omd">Omni Glass</h3><p>Bright glass harp. The classic strum.</p></li>
+      <li><b>2</b><h3 class="omd">Tape Dream</h3><p>Warm pad on a wobbling cassette.</p></li>
+      <li><b>3</b><h3 class="omd">8-Bit Temple</h3><p>Game console chords, crushed and dusty.</p></li>
+      <li><b>4</b><h3 class="omd">Cosmic Harp</h3><p>Plucked strings with a shimmer trail.</p></li>
+      <li><b>5</b><h3 class="omd">Mutant Organ</h3><p>An organ that changes its mind every bar.</p></li>
+      <li><b>6</b><h3 class="omd">Warp Oracle</h3><p>Ring-modulated, metallic, off-world.</p></li>
+      <li><b>7</b><h3 class="omd">Dark Ritual</h3><p>Low, slow and wide. For the intro.</p></li>
+      <li><b>8</b><h3 class="omd">Neon Arp</h3><p>Tempo-synced arpeggio, ready for the drop.</p></li>
+    </ol>
+  </section>
+
+  <section class="om-buy" id="buy" aria-label="Buy">
+    <img src="{{ cdn }}omnicore-hero.jpg?width=1800" alt="" loading="lazy">
+    <div class="in">
+      <h2 class="omd">Open the eye</h2>
+      <p class="pr omt">{% if p.tags contains 'coming-soon' %}Coming soon. {{ price }}, once.{% else %}{{ price }}, once. Yours forever.{% endif %}</p>
+      <div class="om-btns">
+        {%- if p.tags contains 'coming-soon' -%}<span class="om-b om-b2">Coming soon</span>{%- elsif vw -%}<a class="om-b om-b1" href="/cart/{{ vw.id }}:1">Buy for Windows</a>{%- endif -%}
+        {%- if vm and p.tags contains 'mac-ready' -%}<a class="om-b om-b2" href="/cart/{{ vm.id }}:1">Buy for Mac</a>{%- elsif p.tags contains 'coming-soon' -%}{%- else -%}<span class="om-b om-b2">Mac version soon</span>{%- endif -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="om-spec omt">
+    <div><h4 class="omd">Formats</h4><p>VST3 and standalone on Windows 10 and 11. VST3, AU and standalone on macOS 11 or newer.</p></div>
+    <div><h4 class="omd">Works in</h4><p>FL Studio, Ableton Live, Logic Pro, Studio One, Reaper, Bitwig, Cubase.</p></div>
+    <div><h4 class="omd">License</h4><p>One-time purchase. No subscription, no iLok. Download right after checkout.</p></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var root=document.querySelector('.omx'); if(!root) return;
+  var RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cl=function(v,a,b){return Math.min(b,Math.max(a,v))}, seg=function(p,a,b){return cl((p-a)/(b-a),0,1)}, ease=function(t){return 1-Math.pow(1-t,3)}, ein=function(t){return t*t*t};
+  function prog(el){var r=el.getBoundingClientRect(),t=r.height-innerHeight;return {p:cl(-r.top/t,0,1),r:r}}
+
+  // sound + visual
+  var btn=root.querySelector('.om-play'), au=root.querySelector('.om-snd audio'), cv=root.querySelector('.om-snd canvas'), cx=cv.getContext('2d');
+  var ac=null, an=null, buf=null, level=0;
+  function setup(){
+    if(ac) return;
+    try{
+      au.crossOrigin='anonymous';
+      ac=new (window.AudioContext||window.webkitAudioContext)();
+      var src=ac.createMediaElementSource(au); an=ac.createAnalyser(); an.fftSize=1024; buf=new Uint8Array(an.fftSize);
+      src.connect(an); an.connect(ac.destination);
+    }catch(e){an=null}
+  }
+  btn.addEventListener('click',function(){
+    if(au.paused){setup(); if(ac&&ac.state==='suspended')ac.resume(); au.play().catch(function(){au.removeAttribute('crossorigin');an=null;au.load();au.play()})}
+    else au.pause();
+  });
+  au.addEventListener('play',function(){btn.classList.add('on');btn.setAttribute('aria-label','Pause the demo');loop()});
+  au.addEventListener('pause',function(){btn.classList.remove('on');btn.setAttribute('aria-label','Play the demo')});
+  au.addEventListener('ended',function(){btn.classList.remove('on')});
+  function loop(){
+    var d=Math.min(devicePixelRatio||1,2), W=cv.clientWidth*d, H=cv.clientHeight*d;
+    if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
+    cx.clearRect(0,0,W,H);
+    var n=256, pts=[];
+    if(an){an.getByteTimeDomainData(buf);for(var i=0;i<n;i++)pts.push((buf[Math.floor(i*buf.length/n)]-128)/128)}
+    else{var t=au.currentTime;for(var i=0;i<n;i++)pts.push(Math.sin(i*.19+t*9)*Math.sin(i*.031+t)*.5)}
+    var pk=0;pts.forEach(function(v){pk=Math.max(pk,Math.abs(v))}); level+=(pk-level)*.2;
+    var cxm=W/2, cym=H*.52, R=Math.min(W,H)*.2;
+    for(var ring=0;ring<3;ring++){
+      cx.beginPath();
+      for(var i=0;i<=n;i++){var a=i/n*Math.PI*2, v=pts[i%n], r=R*(1+ring*.32)+v*R*(.6-ring*.12);var x=cxm+Math.cos(a)*r, y=cym+Math.sin(a)*r*.62; i?cx.lineTo(x,y):cx.moveTo(x,y)}
+      cx.strokeStyle='rgba(255,'+(42+ring*40)+','+(26+ring*20)+','+(.85-ring*.25)+')'; cx.lineWidth=(3-ring)*d; cx.shadowColor='#ff2a1a'; cx.shadowBlur=24*d*level; cx.stroke();
+    }
+    if(!au.paused) requestAnimationFrame(loop);
+  }
+
+  var hero=root.querySelector('.om-hero'), himg=hero.querySelector('.ph img'), burn=hero.querySelector('.burn');
+  var map=root.querySelector('.om-map'), steps=[].slice.call(map.querySelectorAll('.step')), hots=[].slice.call(map.querySelectorAll('.hot')), pic=map.querySelector('.pic');
+  var focus=[[0,-14,1.55],[0,-24,1.7],[0,-14,1.6],[0,8,1.7],[0,-6,1.6]];
+  var cos=root.querySelector('.om-cos'), rows=[].slice.call(cos.querySelectorAll('.row')), words=[].slice.call(cos.querySelectorAll('.row span')), say=cos.querySelector('.sx');
+  var lines={Shimmer:'Shimmer sends the reverb up an octave, so every chord leaves a halo.',Warp:'Warp ring-modulates the voice into something metallic and off-world.',Orbit:'Orbit spins the sound around your head with a six-stage phaser.',Mutant:'Mutant moves the filter and pitch at random, in time, on its own.',Tape:'Tape chorus wobbles like an old cassette deck.',Crush:'The crusher drops bits and sample rate for 8-bit grit.',Echo:'Analog delay bounces left and right, darker on every repeat.',Space:'Space reverb is a huge hall that never quite ends.'};
+  var buy=root.querySelector('.om-buy'), lastStep=-1, lastWord='';
+
+  function frame(){
+    ticking=false;
+    var h=prog(hero), a=h.p;
+    himg.style.setProperty('--z',(1+ein(seg(a,.05,.62))*13).toFixed(3));
+    burn.style.setProperty('--bo',ease(seg(a,.42,.62)).toFixed(3));
+    hero.style.setProperty('--t1',(1-seg(a,.02,.14)).toFixed(3));
+    hero.style.setProperty('--t2',ease(seg(a,.62,.8)).toFixed(3));
+
+    var m=prog(map), q=m.p, si=Math.min(4,Math.floor(seg(q,.02,.98)*5));
+    if(si!==lastStep){lastStep=si;steps.forEach(function(s,i){s.classList.toggle('on',i===si)});hots.forEach(function(x){x.classList.toggle('on',+x.dataset.s===si)});var f=focus[si];pic.style.setProperty('--px',f[0]+'%');pic.style.setProperty('--py',f[1]*-1+'%');pic.style.setProperty('--ps',f[2])}
+
+    var c=prog(cos), cp=ease(seg(c.p,.04,.96));
+    rows.forEach(function(r){var max=r.scrollWidth-innerWidth, dir=+r.dataset.d; r.style.setProperty('--tx',(dir<0?-cp*max:-(1-cp)*max).toFixed(1)+'px')});
+    var best=null,bd=1e9;words.forEach(function(w){var r=w.getBoundingClientRect(),dd=Math.abs(r.left+r.width/2-innerWidth/2);if(dd<bd){bd=dd;best=w}});
+    words.forEach(function(w){w.classList.toggle('on',w===best)});
+    if(best&&best.textContent!==lastWord){lastWord=best.textContent;say.textContent=lines[lastWord]||''}
+
+    var b=buy.getBoundingClientRect(), bp=cl(1-(b.top+b.height)/(innerHeight+b.height),0,1);
+    buy.style.setProperty('--bz',(1.2-.2*bp).toFixed(4));
+  }
+  var ticking=false; function req(){if(!ticking){ticking=true;requestAnimationFrame(frame)}}
+  if(RM){steps.forEach(function(s,i){s.classList.toggle('on',i===0)});hots[0].classList.add('on');return}
+  addEventListener('scroll',req,{passive:true}); addEventListener('resize',req);
+  frame();
+})();
+</script>
+{% schema %}
+{"name":"TW OmniCore 3000","settings":[],"presets":[{"name":"TW OmniCore 3000"}]}
+{% endschema %}

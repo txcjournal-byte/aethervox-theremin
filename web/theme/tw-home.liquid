@@ -74,6 +74,8 @@
                 assign world = cdn | append: 'vb-hero2.jpg?width=1400'
               when 'alpine-theremin'
                 assign world = cdn | append: 'tyrol-1890-rosengarten.jpg?width=1400'
+              when 'omnicore-3000'
+                assign world = cdn | append: 'omnicore-hero.jpg?width=1400'
             endcase
           -%}
           <img src="{{ world }}" alt="" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
@@ -99,6 +101,9 @@
               when 'alpine-theremin'
                 assign gui = cdn | append: 'alpine-theremin-plugin.jpg?width=1600'
                 assign fact = '1929 theremin. 6 knobs.'
+              when 'omnicore-3000'
+                assign gui = cdn | append: 'omnicore-gui.jpg?width=1600'
+                assign fact = 'Chords, strum, arp. Cosmic FX.'
             endcase
             assign nm = pr.title | split: ' - ' | first | remove: 'TrapWin '
             assign vw = pr.variants | where: 'title', 'Windows' | first
