@@ -2,6 +2,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "Parameters.h"
 #include "DSP/ChordEngine.h"
+#include "EchoGuard.h"
 
 /**
     OmniCore 3000 processor.
@@ -29,7 +30,7 @@ public:
 
     const juce::String getName() const override { return "OmniCore 3000"; }
     bool acceptsMidi() const override { return true; }
-    bool producesMidi() const override { return false; }
+    bool producesMidi() const override { return true; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 6.0; }
 
@@ -73,6 +74,9 @@ public:
     std::atomic<bool> hostPlaying { false };
     /** Esc on the pyramid: silence everything now. */
     std::atomic<bool> panic { false };
+    /** How live playing is captured: 0 = DRAG MIDI (take inside the plugin),
+        1 = REC -> PIANO ROLL (live notes go out as MIDI; FL records them through a loopback port). */
+    std::atomic<int> recMode { 0 };
 
     /** Notes that sound right now (for lighting the keys). */
     std::array<std::atomic<bool>, 128> noteLit {};
@@ -82,7 +86,9 @@ private:
     oc::ChordEngine chords;
     std::vector<float> scratchR;
     int64_t samplesSeen = 0;
-    juce::MidiBuffer outMidi;
+    juce::MidiBuffer outMidi, hostMidi;
+    EchoGuard echo;
+    int hostHeld = 0;
 
     void pushParams();
     void handle (const juce::MidiMessage&);

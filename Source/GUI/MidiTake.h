@@ -198,3 +198,36 @@ public:
 private:
     bool dragging = false;
 };
+
+/** "REC > PIANO ROLL" pill: when on, mouse playing goes out as MIDI notes, so FL's Record
+    (through a loopback MIDI port) writes them straight into the piano roll. */
+class RecModeButton : public juce::Component
+{
+public:
+    std::function<bool()> isOn, hostPlaying;
+    std::function<void (bool)> setOn;
+
+    void paint (juce::Graphics& g) override
+    {
+        const bool on = isOn && isOn();
+        auto r = getLocalBounds().toFloat().reduced (1.0f);
+        if (on)
+        {
+            g.setColour (juce::Colour (0x55ff2a1a));
+            g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
+            r = r.reduced (3.0f);
+        }
+        g.setColour (juce::Colour (on ? 0xffd8231d : 0x99403a30));
+        g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
+        g.setColour (juce::Colour (on ? 0xffffffff : 0xffe6dccb));
+        g.setFont (juce::FontOptions (r.getHeight() * 0.40f, juce::Font::bold));
+        const bool live = on && hostPlaying && hostPlaying();
+        g.drawText (on ? (live ? "REC > PIANO ROLL  (LIVE)" : "REC > PIANO ROLL  ON") : "REC > PIANO ROLL  OFF",
+                    getLocalBounds(), juce::Justification::centred);
+    }
+    void mouseEnter (const juce::MouseEvent&) override { setMouseCursor (juce::MouseCursor::PointingHandCursor); }
+    void mouseUp (const juce::MouseEvent& e) override
+    {
+        if (e.mouseWasClicked() && setOn) { setOn (! (isOn && isOn())); repaint(); }
+    }
+};

@@ -327,6 +327,43 @@ void AetherVoxProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     hostPlaying.store (playingNow);
 
+    // host MIDI without our own notes coming back through the loopback port (REC -> piano roll)
+    {
+        hostMidi.clear();
+        const auto window = (int64_t) (getSampleRate() * 0.6);
+        for (const auto meta : midi)
+        {
+            const auto m = meta.getMessage();
+            if (m.isNoteOnOrOff() && echo.isEcho (m.getNoteNumber(), m.isNoteOn(), (int64_t) sampleClock + meta.samplePosition, window)) continue;
+            hostMidi.addEvent (m, meta.samplePosition);
+        }
+        midi.swapWith (hostMidi);
+    }
+
+    // REC -> piano roll: what the hand plays with the mouse, as notes on the way out
+    outMidi.clear();
+    {
+        int want = -1; float vol = 0.0f;
+        if (recMode.load() == 1 && padActive.load())
+        {
+            vol = padVolume.load();
+            const float pm = Params::pitchFieldBaseMidi + padPitch.load() * raw.pitchSens->load() * 12.0f;
+            if (vol >= 0.06f || (liveNote >= 0 && vol >= 0.03f))
+                want = (liveNote >= 0 && std::abs (pm - (float) liveNote) < 0.62f) ? liveNote : juce::jlimit (0, 127, (int) std::lround (pm));
+        }
+        if (want != liveNote)
+        {
+            const auto t = (int64_t) sampleClock;
+            if (want >= 0)   // new note first, then release the old one: legato, so the slide stays a slide
+            {
+                outMidi.addEvent (juce::MidiMessage::noteOn (1, want, (juce::uint8) juce::jlimit (30, 127, juce::roundToInt (35.0f + vol * 92.0f))), 0);
+                echo.sent (want, true, t);
+            }
+            if (liveNote >= 0) { outMidi.addEvent (juce::MidiMessage::noteOff (1, liveNote), want >= 0 ? 1 : 0); echo.sent (liveNote, false, t); }
+            liveNote = want;
+        }
+    }
+
     // sample-accurate MIDI: render the voice in segments between events
     int pos = 0;
     for (const auto meta : midi)
@@ -347,6 +384,7 @@ void AetherVoxProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         engine.renderVoice (mono.data() + pos, n - pos);
     }
     sampleClock += (juce::uint64) n;
+    midi.swapWith (outMidi);   // empty unless REC -> piano roll
 
     float* L = buffer.getWritePointer (0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer (1) : scratchR.data();
@@ -400,7 +438,10 @@ void AetherVoxProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
         if (xml->hasTagName (apvts.state.getType()))
+        {
             apvts.replaceState (juce::ValueTree::fromXml (*xml));
+            recMode.store ((int) apvts.state.getProperty ("recMode", 0));
+        }
 }
 
 juce::AudioProcessorEditor* AetherVoxProcessor::createEditor()

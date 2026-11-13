@@ -32,6 +32,7 @@ private:
     BabickaView view;
     std::array<PanelKnob, 6> panelKnobs;
     DragMidiButton dragMidi;
+    RecModeButton recMode;
     bool wasHostPlaying = false;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> knobAttachments;
     juce::int64 lastTick = 0;

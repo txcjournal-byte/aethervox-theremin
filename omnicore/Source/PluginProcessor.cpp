@@ -102,6 +102,11 @@ void OmniProcessor::handle (const MidiMessage& m)
         {
             if (note < 36) chords.chordButton (synth, note / 12, note % 12, on, on ? jmax (0.5f, vel) : 0.0f);
         }
+        else if (ch == 2)
+        {
+            // recorded live notes (REC -> piano roll come back on channel 2): play them exactly as recorded
+            if (on) synth.noteOn (note, jmax (0.05f, vel)); else synth.noteOff (note);
+        }
         else if (ch == stringChannel)
         {
             if (on && note >= 100) chords.strumSweep (synth, note == 100, jmax (0.5f, vel));
@@ -133,6 +138,26 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
 
     if (panic.exchange (false)) { chords.allOff (synth); keyboardState.reset(); }
 
+    // host MIDI: drop our own notes coming back through the loopback port (REC -> piano roll)
+    bool hostNotes = false;
+    {
+        hostMidi.clear();
+        const int64_t window = (int64_t) (getSampleRate() * 0.6);
+        for (const auto meta : midi)
+        {
+            const auto m = meta.getMessage();
+            if (m.isNoteOnOrOff())
+            {
+                if (echo.isEcho (m.getNoteNumber(), m.isNoteOn(), samplesSeen + meta.samplePosition, window)) continue;
+                hostNotes = true;
+                hostHeld = jmax (0, hostHeld + (m.isNoteOn() ? 1 : -1));
+            }
+            hostMidi.addEvent (m, meta.samplePosition);
+        }
+        midi.swapWith (hostMidi);
+    }
+    if (recMode.load() == 0) hostHeld = 0;
+
     // on-screen keys / chord buttons / strings join the incoming MIDI
     keyboardState.processNextMidiBuffer (midi, 0, n, true);
 
@@ -153,13 +178,23 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
     }
     if (pos < n) chords.render (synth, L + pos, R + pos, n - pos, bpm, ppq < 0.0 ? -1.0 : ppq + pos * beatsPerSample);
 
-    // --- what was played -> the live take for DRAG MIDI
+    // --- what was played -> the live take for DRAG MIDI, and (REC mode) out as MIDI for the piano roll.
+    //     Only live playing goes out: while the host itself is playing notes into the pyramid, nothing is sent,
+    //     so a pattern that plays back is never recorded a second time.
+    outMidi.clear();
+    const bool sendOut = recMode.load() == 1 && ! hostNotes && hostHeld == 0;
     {
         const double fs = getSampleRate();
         for (int i = 0; i < synth.logCount; ++i)
         {
             const auto& e = synth.noteLog[(size_t) i];
             const int off = (int) jlimit<int64_t> (0, n - 1, e.clock - clock0);
+            if (sendOut)
+            {
+                const auto vel = (uint8) jlimit (1, 127, roundToInt (e.vel * 127.0f));
+                outMidi.addEvent (e.on ? MidiMessage::noteOn (2, e.note, vel) : MidiMessage::noteOff (2, e.note), off);
+                echo.sent (e.note, e.on, samplesSeen + off);
+            }
             const auto scope = takeFifo.write (1);
             if (scope.blockSize1 > 0)
                 takeBuf[(size_t) scope.startIndex1] = { (double) (samplesSeen + off) / fs,
@@ -168,7 +203,7 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
         synth.logCount = 0;
     }
     samplesSeen += n;
-    midi.clear();
+    midi.swapWith (outMidi);   // empty unless REC -> piano roll
 
     if (buffer.getNumChannels() == 1) { FloatVectorOperations::add (L, R, n); FloatVectorOperations::multiply (L, 0.5f, n); }
     for (int c = 2; c < buffer.getNumChannels(); ++c) buffer.clear (c, 0, n);
@@ -192,7 +227,11 @@ void OmniProcessor::getStateInformation (MemoryBlock& dest)
 void OmniProcessor::setStateInformation (const void* data, int size)
 {
     if (auto xml = getXmlFromBinary (data, size))
-        if (xml->hasTagName (apvts.state.getType())) apvts.replaceState (ValueTree::fromXml (*xml));
+        if (xml->hasTagName (apvts.state.getType()))
+        {
+            apvts.replaceState (ValueTree::fromXml (*xml));
+            recMode.store ((int) apvts.state.getProperty ("recMode", 0));
+        }
 }
 
 void OmniProcessor::mutate()

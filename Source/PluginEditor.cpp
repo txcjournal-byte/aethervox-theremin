@@ -45,6 +45,13 @@ AetherVoxEditor::AetherVoxEditor (AetherVoxProcessor& p)
     view.getTake().setSync ((bool) proc.apvts.state.getProperty ("takeSync", false));
     body.addAndMakeVisible (dragMidi);
 
+    recMode.setBounds (386, designHeight - 84, 330, 52);
+    recMode.isOn        = [this] { return proc.recMode.load() == 1; };
+    recMode.hostPlaying = [this] { return proc.hostPlaying.load(); };
+    recMode.setOn       = [this] (bool on) { proc.recMode.store (on ? 1 : 0); proc.apvts.state.setProperty ("recMode", on ? 1 : 0, nullptr); };
+    proc.recMode.store ((int) proc.apvts.state.getProperty ("recMode", 0));
+    body.addAndMakeVisible (recMode);
+
     // default size: about half the screen width (fits inside the DAW), resizable from the corner
     int startW = 860;
     if (auto* d = Desktop::getInstance().getDisplays().getPrimaryDisplay())
@@ -74,7 +81,7 @@ void AetherVoxEditor::timerCallback()
     const bool playing = proc.hostPlaying.load();
     if (playing && ! wasHostPlaying) view.hostStarted();
     wasHostPlaying = playing;
-    if (++dragRepaint % 10 == 0) dragMidi.repaint();
+    if (++dragRepaint % 10 == 0) { dragMidi.repaint(); recMode.repaint(); }
 }
 
 void AetherVoxEditor::paint (Graphics& g) { g.fillAll (Colours::black); }

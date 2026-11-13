@@ -6,6 +6,7 @@
 #include <vector>
 #include "Parameters.h"
 #include "DSP/ThereminEngine.h"
+#include "EchoGuard.h"
 
 class AetherVoxProcessor : public juce::AudioProcessor
 {
@@ -24,7 +25,7 @@ public:
 
     const juce::String getName() const override        { return JucePlugin_Name; }
     bool acceptsMidi() const override                  { return true; }
-    bool producesMidi() const override                 { return false; }
+    bool producesMidi() const override                 { return true; }
     bool isMidiEffect() const override                 { return false; }
     bool supportsMPE() const override                  { return true; }
     double getTailLengthSeconds() const override       { return 12.0; }
@@ -51,6 +52,8 @@ public:
     std::atomic<double> hostBpm     { 120.0 };
     /** Song position (quarter notes) at the last audio block + when it was taken, for the synced MIDI take. */
     std::atomic<double> songPpq     { -1.0 };
+    /** 0 = DRAG MIDI, 1 = REC -> PIANO ROLL: mouse playing goes out as MIDI notes (FL records them via a loopback port). */
+    std::atomic<int> recMode { 0 };
     std::atomic<double> songStampMs { 0.0 };
     double songPpqNow() const
     {
@@ -111,7 +114,11 @@ private:
     struct Slot { int note = -1, channel = 1; float velocity = 0.0f; bool on = false; uint32_t age = 0; juce::uint64 offTime = 0; };
     std::array<Slot, av::ThereminEngine::maxVoices> slots {};
     uint32_t noteCounter = 0;
-    juce::uint64 sampleClock = 0, eventTime = 0;   // for legato detection (sample time of the current MIDI event)
+    juce::uint64 sampleClock = 0, eventTime = 0;
+    // REC -> piano roll: the mouse melody as notes (back-to-back, a new note at each semitone, like DRAG MIDI)
+    EchoGuard echo;
+    juce::MidiBuffer hostMidi, outMidi;
+    int liveNote = -1;   // for legato detection (sample time of the current MIDI event)
     void polyNoteOn (int note, int channel, float velocity);
     void polyNoteOff (int note, int channel);
     float noteMidi (int note, int channel, bool mpe, float tune, float pbRange) const;

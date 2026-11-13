@@ -14,6 +14,9 @@ namespace
     const Rectangle<float> ledBox { 398.0f, 690.0f, 458.0f, 34.0f };
     // a small LED window set into the metal frame under the keys: drag it into the piano roll
     const Rectangle<float> dragBox { 492.0f, 990.0f, 270.0f, 34.0f };
+    // two small LED buttons in the frame: how live playing is captured
+    const Rectangle<float> modeDragBox { 418.0f, 993.0f, 68.0f, 28.0f };
+    const Rectangle<float> modeRecBox  { 768.0f, 993.0f, 68.0f, 28.0f };
 
     Path almond (Rectangle<float> e, float inset = 0.0f)
     {
@@ -54,6 +57,7 @@ OmniEditor::OmniEditor (OmniProcessor& p) : AudioProcessorEditor (p), proc (p)
     startTimerHz (25);
     showLed ("OMNICORE 3000", OmniProcessor::presetName (proc.currentPreset.load()));
     take.setSync ((bool) proc.apvts.state.getProperty ("takeSync", false));
+    proc.recMode.store ((int) proc.apvts.state.getProperty ("recMode", 0));
 }
 
 void OmniEditor::buildKeys()
@@ -284,6 +288,15 @@ void OmniEditor::mouseDown (const MouseEvent& e)
     grabKeyboardFocus();
     const auto pp = toPhoto (e.position);
     if (e.mods.isPopupMenu() && (ledBox.contains (pp) || dragBox.contains (pp))) { showTakeMenu(); return; }
+    if (modeDragBox.contains (pp) || modeRecBox.contains (pp))
+    {
+        const int m = modeRecBox.contains (pp) ? 1 : 0;
+        proc.recMode.store (m);
+        proc.apvts.state.setProperty ("recMode", m, nullptr);
+        showLed (m == 1 ? "REC > PIANO ROLL" : "DRAG MIDI", m == 1 ? "PRESS REC IN FL AND PLAY" : "PLAY, THEN DRAG THE WINDOW");
+        repaint();
+        return;
+    }
     if (ledBox.contains (pp) || dragBox.contains (pp))
     {
         ledDrag = true;
@@ -511,8 +524,8 @@ void OmniEditor::timerCallback()
     for (auto gl : stringGlow) h = h * 7 + (int64) (gl * 20.0f);
     const bool msg = Time::getMillisecondCounterHiRes() < ledUntil;
     h = h * 131 + (msg ? led1.hashCode64() * 3 + led2.hashCode64() : proc.dispRoot.load() * 17 + proc.dispType.load());
-    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0) + (proc.hostPlaying.load() ? 7 : 0) + (take.isSync() ? 13 : 0);
-    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 360.0f })); }
+    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0) + (proc.hostPlaying.load() ? 7 : 0) + (take.isSync() ? 13 : 0) + proc.recMode.load() * 31;
+    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 370.0f, 680.0f, 520.0f, 360.0f })); }
 }
 
 void OmniEditor::paint (Graphics& g)
@@ -559,44 +572,49 @@ void OmniEditor::paint (Graphics& g)
         const auto& k = keys[i];
         const bool down = (int) i == downKey;
         const bool lit = litCache[i];
-        const auto r = k.r.toNearestInt();
-        if (lit || down)
+        const bool isBar = k.kind == KeyKind::Strum || k.kind == KeyKind::StrumHigh;
+        const bool bigEnter = k.kind == KeyKind::Chord && k.r.getHeight() > 50.0f;
+        // the keycap's top face (the big Enter key is L-shaped: use its upper part)
+        auto face = bigEnter ? Rectangle<float> (k.r.getX() + 3.0f, k.r.getY() + 3.0f, k.r.getWidth() - 6.0f, 32.0f)
+                             : k.r.reduced (isBar ? 4.0f : k.r.getWidth() * 0.09f, k.r.getHeight() * 0.16f);
+        face = face.translated (0.0f, down ? 2.0f : 0.0f);
+        const bool on = (lit || down) && ! isBar;
+        if (on)
         {
-            g.setColour (Colour (0xffff2a1a).withAlpha (down ? 0.55f : 0.35f));
-            g.fillRoundedRectangle (k.r.expanded (5.0f), 7.0f);
-            g.drawImage (photoLit, r.getX(), r.getY() + (down ? 2 : 0), r.getWidth(), r.getHeight(),
-                         r.getX(), r.getY(), r.getWidth(), r.getHeight());
-            if (down) { g.setColour (Colours::black.withAlpha (0.18f)); g.fillRect (k.r.withHeight (2.0f)); }
+            // active: unmistakable amber glow around the key
+            g.setColour (Colour (0xffffb000).withAlpha (down ? 0.75f : 0.55f));
+            g.fillRoundedRectangle (k.r.expanded (4.0f), 7.0f);
+            g.setColour (Colour (0xffffe08a).withAlpha (0.9f));
+            g.drawRoundedRectangle (k.r.expanded (4.0f), 7.0f, 2.0f);
         }
-        // legend printed on the keycap: what this key does (instead of a typewriter letter)
+        if (isBar && down)
         {
-            String t;
-            switch (k.kind)
-            {
-                case KeyKind::Chord:      t = String (oc::ChordEngine::pcName (k.b)) + (k.a == 1 ? "m" : k.a == 2 ? "7" : ""); break;
-                case KeyKind::Mode:       t = k.a == 0 ? "NOTE" : k.a == 1 ? "CHORD" : k.a == 2 ? "STRUM" : "ARP"; break;
-                case KeyKind::Hold:       t = "HOLD"; break;
-                case KeyKind::Bass:       t = "BASS"; break;
-                case KeyKind::ArpRate:    t = "RATE"; break;
-                case KeyKind::Cosmos:     t = "COSMOS"; break;
-                case KeyKind::PresetDown: t = "< SND"; break;
-                case KeyKind::PresetUp:   t = "SND >"; break;
-                case KeyKind::StrumHigh:  t = "STRUM HIGH  -  swipe"; break;
-                case KeyKind::Strum:      t = "STRUM  -  swipe across"; break;
-                default: break;
-            }
-            if (t.isNotEmpty())
-            {
-                auto plate = k.r.reduced (k.r.getWidth() > 120.0f ? 30.0f : k.r.getWidth() * 0.1f, k.r.getHeight() * 0.2f)
-                                .translated (0.0f, down ? 2.0f : 0.0f);
-                g.setGradientFill (ColourGradient (Colour (lit || down ? 0xffff4a38 : 0xffd3221c), plate.getX(), plate.getY(),
-                                                   Colour (lit || down ? 0xffc8160f : 0xff9c120e), plate.getX(), plate.getBottom(), false));
-                g.fillRoundedRectangle (plate, 4.0f);
-                g.setColour (Colour (0xfffff1e6).withAlpha (lit || down ? 1.0f : 0.92f));
-                const float fh = jmin (plate.getHeight() * 0.95f, k.kind == KeyKind::Chord ? 17.0f : 12.5f);
-                g.setFont (FontOptions (fh, Font::bold));
-                g.drawFittedText (t, plate.toNearestInt(), Justification::centred, 1, 0.6f);
-            }
+            g.setColour (Colour (0xffffb000).withAlpha (0.35f));
+            g.fillRoundedRectangle (k.r.expanded (3.0f), 6.0f);
+        }
+        String t;
+        switch (k.kind)
+        {
+            case KeyKind::Chord:      t = String (oc::ChordEngine::pcName (k.b)) + (k.a == 1 ? "m" : k.a == 2 ? "7" : ""); break;
+            case KeyKind::Mode:       t = k.a == 0 ? "NOTE" : k.a == 1 ? "CHORD" : k.a == 2 ? "STRUM" : "ARP"; break;
+            case KeyKind::Hold:       t = "HOLD"; break;
+            case KeyKind::Bass:       t = "BASS"; break;
+            case KeyKind::ArpRate:    t = "RATE"; break;
+            case KeyKind::Cosmos:     t = "COSMOS"; break;
+            case KeyKind::PresetDown: t = "<"; break;
+            case KeyKind::PresetUp:   t = ">"; break;
+            default: break;
+        }
+        if (t.isNotEmpty())
+        {
+            // a printed legend in place of the typewriter letter, same look as the original keycap print
+            g.setGradientFill (ColourGradient (on ? Colour (0xffffd24a) : Colour (0xffd8231d), face.getX(), face.getY(),
+                                               on ? Colour (0xffff8a00) : Colour (0xffa8140f), face.getX(), face.getBottom(), false));
+            g.fillRoundedRectangle (face, 4.0f);
+            g.setColour (on ? Colour (0xff2a0800) : Colour (0xfff6eee8));
+            const float fh = k.kind == KeyKind::Chord ? 15.0f : 11.0f;
+            g.setFont (FontOptions (Font::getDefaultSansSerifFontName(), fh, Font::bold));
+            g.drawFittedText (t, face.toNearestInt(), Justification::centred, 1, 0.55f);
         }
     }
     // strum bars: strings light up as you swipe
@@ -659,6 +677,29 @@ void OmniEditor::paint (Graphics& g)
             t = proc.hostPlaying.load() ? "REC  " + String (n) + " NOTES" : (n > 0 ? "DRAG MIDI > BAR 1  " + String (n) : "SYNC: PRESS REC IN FL");
         else
             t = n > 0 && ! take.isFinished() ? "DRAG MIDI >  " + String (n) + " NOTES" : (n > 0 ? "DROPPED - PLAY = NEW TAKE" : "PLAY, THEN DRAG MIDI");
+        if (proc.recMode.load() == 1)
+            t = proc.hostPlaying.load() ? "REC > PIANO ROLL  (LIVE)" : "REC > PIANO ROLL: PRESS REC IN FL";
         draw (t, dragBox, mid, Justification::centred);
+
+        // capture-mode LED buttons
+        auto led = [&] (Rectangle<float> r, const String& label, bool active)
+        {
+            g.setColour (active ? Colour (0xffff2a1a) : Colour (0xff120607));
+            g.fillRoundedRectangle (r, 5.0f);
+            if (active)
+            {
+                g.setColour (Colour (0xffff2a1a).withAlpha (0.35f));
+                g.fillRoundedRectangle (r.expanded (4.0f), 8.0f);
+                g.setColour (Colour (0xffff2a1a));
+                g.fillRoundedRectangle (r, 5.0f);
+            }
+            g.setColour (Colours::black.withAlpha (0.7f));
+            g.drawRoundedRectangle (r.reduced (0.5f), 5.0f, 1.5f);
+            g.setColour (active ? Colour (0xfffff4ee) : Colour (0xffff4a30).withAlpha (0.55f));
+            g.setFont (FontOptions (Font::getDefaultMonospacedFontName(), 12.0f, Font::bold));
+            g.drawText (label, r, Justification::centred, false);
+        };
+        led (modeDragBox, "DRAG", proc.recMode.load() == 0);
+        led (modeRecBox, "REC", proc.recMode.load() == 1);
     }
 }
