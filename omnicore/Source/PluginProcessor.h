@@ -71,6 +71,8 @@ public:
     juce::AbstractFifo takeFifo { 4096 };
     std::array<TakeEvent, 4096> takeBuf {};
     std::atomic<bool> hostPlaying { false };
+    /** Esc on the pyramid: silence everything now. */
+    std::atomic<bool> panic { false };
 
     /** Notes that sound right now (for lighting the keys). */
     std::array<std::atomic<bool>, 128> noteLit {};

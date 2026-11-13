@@ -152,7 +152,8 @@ public:
         else
         {
             buttonsDown = std::max (0, buttonsDown - 1);
-            if (buttonsDown == 0 && heldKeys.empty() && ! set.hold && chordRoot == pc && chordType == type)
+            // last chord key let go (in whatever order they were pressed): stop, unless HOLD
+            if (buttonsDown == 0 && heldKeys.empty() && ! set.hold)
                 releaseChord (s);
         }
     }

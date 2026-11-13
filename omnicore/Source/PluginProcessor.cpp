@@ -131,6 +131,8 @@ void OmniProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
     pushParams();
     const int64_t clock0 = synth.clock;
 
+    if (panic.exchange (false)) { chords.allOff (synth); keyboardState.reset(); }
+
     // on-screen keys / chord buttons / strings join the incoming MIDI
     keyboardState.processNextMidiBuffer (midi, 0, n, true);
 

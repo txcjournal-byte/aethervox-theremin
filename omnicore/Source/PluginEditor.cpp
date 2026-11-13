@@ -371,6 +371,15 @@ bool OmniEditor::keyPressed (const KeyPress& kp)
         for (auto& gl : stringGlow) gl = 1.0f;
         return true;
     }
+    if (code == KeyPress::escapeKey)
+    {
+        releaseKeyboardChords (true);
+        proc.panic.store (true);
+        auto* prm = proc.apvts.getParameter (PID::hold);
+        prm->beginChangeGesture(); prm->setValueNotifyingHost (0.0f); prm->endChangeGesture();
+        showLed ("ALL OFF", "HOLD OFF");
+        return true;
+    }
     if (kp.getModifiers().isCommandDown() || kp.getModifiers().isAltDown()) return false;
     const int idx = keyForCode (code);
     if (idx < 0) return false;
@@ -554,7 +563,8 @@ void OmniEditor::paint (Graphics& g)
         {
             const int root = proc.dispRoot.load();
             a = root < 0 ? String ("--") : String (oc::ChordEngine::pcName (root)) + oc::ChordEngine::typeName (proc.dispType.load());
-            b = Params::modeNames[roundToInt (proc.apvts.getRawParameterValue (PID::mode)->load())] + "   "
+            b = String (proc.apvts.getRawParameterValue (PID::hold)->load() > 0.5f ? "HOLD  " : "")
+              + Params::modeNames[roundToInt (proc.apvts.getRawParameterValue (PID::mode)->load())] + "   "
               + OmniProcessor::presetName (proc.currentPreset.load());
             const bool hint = ! take.isEmpty() && ! take.isFinished() && ! take.isSounding()
                               && std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5;
