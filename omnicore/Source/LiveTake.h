@@ -16,28 +16,42 @@ public:
     struct Ev { double sec, ppq; int note; float vel; bool on; };
 
     /** Silence longer than this starts a fresh take. */
-    static constexpr double gapForNewTake = 4.0;
+    static constexpr double gapForNewTake = 3.0;
 
     void add (const Ev& e)
     {
         const bool synced = e.ppq >= 0.0;
-        if (e.on && ! evs.empty() && ! isSounding())
+        if (e.on)
         {
-            const bool modeChanged = synced != (evs.back().ppq >= 0.0);
-            const bool longGap = e.sec - lastSec > gapForNewTake;
-            const bool jumpedBack = synced && e.ppq + 0.01 < evs.back().ppq;     // host looped / restarted
-            if (modeChanged || longGap || jumpedBack) clear();
+            if (! evs.empty())
+            {
+                const bool modeChanged = synced != (evs.back().ppq >= 0.0);
+                const bool longGap = e.sec - lastOnSec > gapForNewTake;          // a pause in playing
+                if (finished || modeChanged || longGap) clear();
+            }
+            finished = false;
+            lastOnSec = e.sec; lastOnPpq = e.ppq;
+            ++notes;
         }
+        else if (evs.empty()) return;                                           // stray note-off before the take
         if (e.note >= 0 && e.note < 128) held[(size_t) e.note] = e.on;
-        if (e.on) ++notes;
         lastSec = e.sec;
         evs.push_back (e);
     }
 
+    /** After a drag-out: the next note played starts a brand-new take. */
+    void markFinished() { finished = true; }
+    bool isFinished() const { return finished; }
+
     void clear() { evs.clear(); held.fill (false); notes = 0; }
     bool isEmpty() const { return notes == 0; }
     int countNotes() const { return notes; }
-    bool isSounding() const { for (bool h : held) if (h) return true; return false; }
+    bool isSounding (double nowSec = -1.0) const
+    {
+        if (nowSec >= 0.0) return nowSec - lastOnSec < 0.6;
+        for (bool h : held) if (h) return true;
+        return false;
+    }
     double lastEventSec() const { return lastSec; }
 
     bool writeTo (const juce::File& file, double bpm) const
@@ -48,13 +62,16 @@ public:
         const bool synced = evs.front().ppq >= 0.0;
 
         // start of the take: bar line before the first note (synced) or the first note itself
-        double firstOn = 0.0; bool found = false;
-        for (auto& e : evs) if (e.on) { firstOn = synced ? e.ppq : e.sec; found = true; break; }
-        if (! found) return false;
-        const double base = synced ? std::floor (firstOn / 4.0) * 4.0 : firstOn;
+        // the first note keeps its place in the bar (when the host was playing);
+        // everything after it keeps the live timing, so pattern loops never fold notes on top of each other
+        const Ev* first = nullptr;
+        for (auto& e : evs) if (e.on) { first = &e; break; }
+        if (first == nullptr) return false;
+        const double lead = synced ? first->ppq - std::floor (first->ppq / 4.0) * 4.0 : 0.0;
+        const double t0 = first->sec;
         auto tick = [&] (const Ev& e)
         {
-            const double beats = synced ? e.ppq - base : (e.sec - base) * tempo / 60.0;
+            const double beats = lead + (e.sec - t0) * tempo / 60.0;
             return juce::jmax (0.0, std::round (beats * tpq));
         };
 
@@ -109,5 +126,6 @@ private:
     std::vector<Ev> evs;
     std::array<bool, 128> held {};
     int notes = 0;
-    double lastSec = -1.0e9;
+    double lastSec = -1.0e9, lastOnSec = -1.0e9, lastOnPpq = -1.0;
+    bool finished = false;
 };

@@ -308,7 +308,12 @@ void OmniEditor::mouseDrag (const MouseEvent& e)
         const auto f = writeTake();
         if (! f.existsAsFile()) return;
         dragging = true;
-        DragAndDropContainer::performExternalDragDropOfFiles ({ f.getFullPathName() }, false, this, [this] { dragging = false; });
+        DragAndDropContainer::performExternalDragDropOfFiles ({ f.getFullPathName() }, false, this, [this]
+        {
+            dragging = false;
+            take.markFinished();                   // play again = a fresh take
+            showLed ("MIDI DROPPED", "PLAY AGAIN = NEW TAKE");
+        });
         return;
     }
     if (downKey >= 0)
@@ -468,7 +473,7 @@ void OmniEditor::timerCallback()
     for (auto gl : stringGlow) h = h * 7 + (int64) (gl * 20.0f);
     const bool msg = Time::getMillisecondCounterHiRes() < ledUntil;
     h = h * 131 + (msg ? led1.hashCode64() * 3 + led2.hashCode64() : proc.dispRoot.load() * 17 + proc.dispType.load());
-    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes();
+    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0);
     if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 380.0f, 680.0f, 500.0f, 360.0f })); }
 }
 
@@ -551,7 +556,7 @@ void OmniEditor::paint (Graphics& g)
             a = root < 0 ? String ("--") : String (oc::ChordEngine::pcName (root)) + oc::ChordEngine::typeName (proc.dispType.load());
             b = Params::modeNames[roundToInt (proc.apvts.getRawParameterValue (PID::mode)->load())] + "   "
               + OmniProcessor::presetName (proc.currentPreset.load());
-            const bool hint = ! take.isEmpty() && ! take.isSounding()
+            const bool hint = ! take.isEmpty() && ! take.isFinished() && ! take.isSounding()
                               && std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5;
             if (hint) b = "DRAG ME > MIDI   " + String (take.countNotes()) + " NOTES";
         }
@@ -580,6 +585,7 @@ void OmniEditor::paint (Graphics& g)
         g.setColour (Colours::white.withAlpha (0.18f));
         g.drawLine (dragBox.getX() + 4.0f, dragBox.getBottom() + 0.5f, dragBox.getRight() - 4.0f, dragBox.getBottom() + 0.5f, 1.0f);
         const Font mid (FontOptions (Font::getDefaultMonospacedFontName(), 15.0f, Font::bold));
-        draw (n > 0 ? "DRAG MIDI >  " + String (n) + " NOTES" : "PLAY, THEN DRAG MIDI", dragBox, mid, Justification::centred);
+        draw (n > 0 && ! take.isFinished() ? "DRAG MIDI >  " + String (n) + " NOTES"
+                                            : (n > 0 ? "DROPPED - PLAY = NEW TAKE" : "PLAY, THEN DRAG MIDI"), dragBox, mid, Justification::centred);
     }
 }
