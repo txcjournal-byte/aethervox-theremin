@@ -289,7 +289,7 @@ void OmniProcessor::setCosmos (int level)
         if (auto* prm = apvts.getParameter (id))
         { prm->beginChangeGesture(); prm->setValueNotifyingHost (prm->convertTo0to1 (v)); prm->endChangeGesture(); }
     };
-    const float k = level == 0 ? 0.0f : (level == 1 ? 0.45f : 1.0f);
+    const float k = level == 0 ? 0.0f : (level == 1 ? 0.7f : 1.0f);
     set (PID::shimmer, 0.7f * k); set (PID::orbitMix, 0.6f * k); set (PID::mutAmt, 0.35f * k); set (PID::warpMix, level == 2 ? 0.18f : 0.0f);
     set (PID::spcMix, 0.28f + 0.3f * k);
 }

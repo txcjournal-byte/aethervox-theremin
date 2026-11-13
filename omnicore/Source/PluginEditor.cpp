@@ -568,6 +568,36 @@ void OmniEditor::paint (Graphics& g)
                          r.getX(), r.getY(), r.getWidth(), r.getHeight());
             if (down) { g.setColour (Colours::black.withAlpha (0.18f)); g.fillRect (k.r.withHeight (2.0f)); }
         }
+        // legend printed on the keycap: what this key does (instead of a typewriter letter)
+        {
+            String t;
+            switch (k.kind)
+            {
+                case KeyKind::Chord:      t = String (oc::ChordEngine::pcName (k.b)) + (k.a == 1 ? "m" : k.a == 2 ? "7" : ""); break;
+                case KeyKind::Mode:       t = k.a == 0 ? "NOTE" : k.a == 1 ? "CHORD" : k.a == 2 ? "STRUM" : "ARP"; break;
+                case KeyKind::Hold:       t = "HOLD"; break;
+                case KeyKind::Bass:       t = "BASS"; break;
+                case KeyKind::ArpRate:    t = "RATE"; break;
+                case KeyKind::Cosmos:     t = "COSMOS"; break;
+                case KeyKind::PresetDown: t = "< SND"; break;
+                case KeyKind::PresetUp:   t = "SND >"; break;
+                case KeyKind::StrumHigh:  t = "STRUM HIGH  -  swipe"; break;
+                case KeyKind::Strum:      t = "STRUM  -  swipe across"; break;
+                default: break;
+            }
+            if (t.isNotEmpty())
+            {
+                auto plate = k.r.reduced (k.r.getWidth() > 120.0f ? 30.0f : k.r.getWidth() * 0.1f, k.r.getHeight() * 0.2f)
+                                .translated (0.0f, down ? 2.0f : 0.0f);
+                g.setGradientFill (ColourGradient (Colour (lit || down ? 0xffff4a38 : 0xffd3221c), plate.getX(), plate.getY(),
+                                                   Colour (lit || down ? 0xffc8160f : 0xff9c120e), plate.getX(), plate.getBottom(), false));
+                g.fillRoundedRectangle (plate, 4.0f);
+                g.setColour (Colour (0xfffff1e6).withAlpha (lit || down ? 1.0f : 0.92f));
+                const float fh = jmin (plate.getHeight() * 0.95f, k.kind == KeyKind::Chord ? 17.0f : 12.5f);
+                g.setFont (FontOptions (fh, Font::bold));
+                g.drawFittedText (t, plate.toNearestInt(), Justification::centred, 1, 0.6f);
+            }
+        }
     }
     // strum bars: strings light up as you swipe
     for (const auto& k : keys)
