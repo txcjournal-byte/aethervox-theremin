@@ -11,7 +11,9 @@
 <style>
   html body:has(.omx) .twp-pills{display:none!important}
   html body:has(.omx) .header-wrapper:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g):not(#h){background:#0a1226!important;border-bottom:1px solid rgba(255,42,26,.22)!important}
-  html body:has(.omx){background:#0a1226}
+  html body:has(.omx){background:#0a1226!important;background-image:none!important}
+  html body:has(.omx) .twh-bar{background:rgba(8,14,32,var(--hb,.55))!important}
+  html body:has(.omx) .twf-bg::after{background:linear-gradient(180deg,rgba(10,18,38,0) 0%,rgba(10,18,38,.45) 30%,rgba(10,18,38,.75) 100%)!important}
   .omx{--sky:#0a1226;--deep:#050a18;--ink:#f2dcc4;--mute:rgba(242,220,196,.68);--red:#ff2a1a;--ember:#ff7a3d;background:var(--sky);color:var(--ink);overflow-x:clip}
   .omx *{box-sizing:border-box}
   .omx p{margin:0}
