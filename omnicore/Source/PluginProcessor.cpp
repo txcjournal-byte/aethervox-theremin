@@ -318,20 +318,30 @@ void OmniProcessor::applyPreset (int i)
             set (PID::dlyMix, 0.35f); set (PID::spcMix, 0.25f); break;
         default: break;
     }
-    if (cosmosLevel.load() > 0) setCosmos (cosmosLevel.load());
+    if (cosmosAmount.load() > 0.001f) setCosmosAmount (cosmosAmount.load());
 }
 
 void OmniProcessor::setCosmos (int level)
 {
-    cosmosLevel.store (jlimit (0, 2, level));
+    setCosmosAmount (level == 0 ? 0.0f : (level == 1 ? 0.55f : 1.0f));
+}
+
+void OmniProcessor::setCosmosAmount (float k)
+{
+    k = jlimit (0.0f, 1.0f, k);
+    cosmosAmount.store (k);
+    cosmosLevel.store (k < 0.01f ? 0 : (k < 0.8f ? 1 : 2));
     auto set = [this] (const char* id, float v)
     {
         if (auto* prm = apvts.getParameter (id))
         { prm->beginChangeGesture(); prm->setValueNotifyingHost (prm->convertTo0to1 (v)); prm->endChangeGesture(); }
     };
-    const float k = level == 0 ? 0.0f : (level == 1 ? 0.7f : 1.0f);
-    set (PID::shimmer, 0.7f * k); set (PID::orbitMix, 0.6f * k); set (PID::mutAmt, 0.35f * k); set (PID::warpMix, level == 2 ? 0.18f : 0.0f);
-    set (PID::spcMix, 0.28f + 0.3f * k);
+    // one knob, the whole cosmos: halo first, then the sound starts to orbit, mutate and warp
+    set (PID::shimmer, 0.8f * k);
+    set (PID::orbitMix, 0.7f * jlimit (0.0f, 1.0f, k * 1.4f - 0.1f));
+    set (PID::mutAmt, 0.45f * jlimit (0.0f, 1.0f, k * 1.6f - 0.4f));
+    set (PID::warpMix, 0.28f * jlimit (0.0f, 1.0f, k * 2.0f - 1.0f));
+    set (PID::spcMix, 0.28f + 0.35f * k);
 }
 
 AudioProcessorEditor* OmniProcessor::createEditor() { return new OmniEditor (*this); }

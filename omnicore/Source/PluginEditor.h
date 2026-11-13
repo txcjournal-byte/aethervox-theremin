@@ -30,6 +30,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void mouseDown (const juce::MouseEvent&) override;
+    void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void mouseDrag (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override;
     void mouseMove (const juce::MouseEvent&) override;
@@ -61,6 +62,13 @@ private:
     std::map<int, int> kbHeld;        // key code -> chord key index
     int hoverKey = -1;
     juce::int64 lastPaintHash = 0;
+    // two chicken-head knobs on the stone under the eye: SOUND (8 presets) and COSMOS (0..1)
+    int knobDrag = -1; float knobStartVal = 0.0f, knobStartY = 0.0f;
+    int knobAt (juce::Point<float> photoPos) const;
+    void setKnob (int which, float value01);
+    float knobValue (int which) const;
+    void drawKnob (juce::Graphics&, juce::Point<float> c, float r, float value01, int steps, const juce::String& label,
+                   const juce::StringArray& marks);
     bool eyeWasLive = true;
     int modeBeforeArp = 1; bool holdBeforeArp = false;
     void toggleArp (bool forceOn);

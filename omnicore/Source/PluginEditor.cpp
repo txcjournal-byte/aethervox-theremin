@@ -14,6 +14,9 @@ namespace
     const Rectangle<float> ledBox { 398.0f, 690.0f, 458.0f, 34.0f };
     // a small LED window set into the metal frame under the keys: drag it into the piano roll
     const Rectangle<float> dragBox { 492.0f, 990.0f, 270.0f, 34.0f };
+    // knobs set into the stone between the eye and the keyboard
+    const Point<float> knobPos[2] = { { 498.0f, 612.0f }, { 758.0f, 612.0f } };
+    constexpr float knobR = 34.0f;
     // two small LED buttons in the frame: how live playing is captured
     const Rectangle<float> modeDragBox { 418.0f, 993.0f, 68.0f, 28.0f };
     const Rectangle<float> modeRecBox  { 768.0f, 993.0f, 68.0f, 28.0f };
@@ -152,6 +155,108 @@ void OmniEditor::toggleArp (bool forceOn)
     }
     const int r = roundToInt (proc.apvts.getRawParameterValue (PID::arpRate)->load());
     showLed ("ARP ON", String (Params::arpRateNames[r]) + "   V = OFF");
+}
+
+int OmniEditor::knobAt (Point<float> p) const
+{
+    for (int i = 0; i < 2; ++i) if (p.getDistanceFrom (knobPos[i]) < knobR + 8.0f) return i;
+    return -1;
+}
+
+float OmniEditor::knobValue (int which) const
+{
+    return which == 0 ? (float) proc.currentPreset.load() / (float) (OmniProcessor::numPresets - 1)
+                      : proc.cosmosAmount.load();
+}
+
+void OmniEditor::setKnob (int which, float v)
+{
+    v = jlimit (0.0f, 1.0f, v);
+    if (which == 0)
+    {
+        const int i = roundToInt (v * (OmniProcessor::numPresets - 1));
+        if (i != proc.currentPreset.load())
+        {
+            proc.applyPreset (i);
+            showLed ("SOUND " + String (i + 1), OmniProcessor::presetName (i));
+        }
+    }
+    else
+    {
+        proc.setCosmosAmount (v);
+        showLed ("COSMOS", v < 0.01f ? String ("OFF") : String (roundToInt (v * 100)) + " %");
+    }
+    repaint();
+}
+
+void OmniEditor::mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& w)
+{
+    const int k = knobAt (toPhoto (e.position));
+    if (k < 0) return;
+    const float step = k == 0 ? 1.0f / (OmniProcessor::numPresets - 1) : 0.05f;
+    setKnob (k, knobValue (k) + (w.deltaY > 0 ? step : -step));
+}
+
+void OmniEditor::drawKnob (Graphics& g, Point<float> c, float r, float v, int steps, const String& label, const StringArray& marks)
+{
+    const float a0 = -MathConstants<float>::pi * 0.75f, a1 = MathConstants<float>::pi * 0.75f;
+    const float ang = a0 + (a1 - a0) * v;
+    auto engraved = [&] (const String& t, Rectangle<float> rr, float h)
+    {
+        g.setFont (FontOptions (Font::getDefaultSansSerifFontName(), h, Font::bold));
+        g.setColour (Colours::white.withAlpha (0.38f)); g.drawText (t, rr.translated (0.0f, 1.3f), Justification::centred, false);
+        g.setColour (Colour (0xff0d0b0a).withAlpha (0.85f)); g.drawText (t, rr, Justification::centred, false);
+    };
+    // scale: ticks cut into the stone, the active range glowing red
+    const int n = steps > 1 ? steps : 11;
+    for (int i = 0; i < n; ++i)
+    {
+        const float t = (float) i / (float) (n - 1), aa = a0 + (a1 - a0) * t;
+        const auto p1 = c.getPointOnCircumference (r + 7.0f, aa), p2 = c.getPointOnCircumference (r + (i % (steps > 1 ? 1 : 5) == 0 ? 16.0f : 12.0f), aa);
+        const bool on = steps > 1 ? (roundToInt (v * (n - 1)) == i) : (t <= v + 0.001f && v > 0.005f);
+        g.setColour (on ? Colour (0xffff3a24) : Colour (0xff0d0b0a).withAlpha (0.8f));
+        g.drawLine ({ p1, p2 }, on ? 3.0f : 2.0f);
+        if (on) { g.setColour (Colour (0xffff2a1a).withAlpha (0.35f)); g.drawLine ({ p1, p2 }, 7.0f); }
+    }
+    if (marks.size() == 2)
+    {
+        engraved (marks[0], Rectangle<float> (60.0f, 16.0f).withCentre (c.getPointOnCircumference (r + 22.0f, a0) + Point<float> (-14.0f, 10.0f)), 11.0f);
+        engraved (marks[1], Rectangle<float> (60.0f, 16.0f).withCentre (c.getPointOnCircumference (r + 22.0f, a1) + Point<float> (14.0f, 10.0f)), 11.0f);
+    }
+    engraved (label, Rectangle<float> (140.0f, 20.0f).withCentre (c - Point<float> (0.0f, r + 27.0f)), 15.0f);
+
+    // drop shadow on the stone
+    g.setColour (Colours::black.withAlpha (0.55f));
+    g.fillEllipse (Rectangle<float> (r * 2.3f, r * 2.3f).withCentre (c + Point<float> (4.0f, 7.0f)));
+    // skirt: black bakelite disc
+    {
+        const auto d = Rectangle<float> (r * 2.0f, r * 2.0f).withCentre (c);
+        ColourGradient sk (Colour (0xff3a3a3d), c.x - r * 0.5f, c.y - r * 0.7f, Colour (0xff050506), c.x + r * 0.6f, c.y + r, true);
+        g.setGradientFill (sk); g.fillEllipse (d);
+        g.setColour (Colours::white.withAlpha (0.18f)); g.drawEllipse (d.reduced (1.0f), 1.5f);
+        g.setColour (Colours::black.withAlpha (0.9f)); g.drawEllipse (d, 1.5f);
+    }
+    // chicken-head pointer: round hub + tapered beak towards the value
+    {
+        Path p;
+        const float hub = r * 0.52f, tip = r * 1.12f, w = r * 0.30f;
+        p.addCentredArc (0.0f, 0.0f, hub, hub, 0.0f, MathConstants<float>::pi * 0.62f, MathConstants<float>::pi * 2.0f - MathConstants<float>::pi * 0.62f, true);
+        p.lineTo (-w * 0.55f, -tip + w * 0.6f);
+        p.quadraticTo (0.0f, -tip - w * 0.3f, w * 0.55f, -tip + w * 0.6f);
+        p.closeSubPath();
+        const auto tr = AffineTransform::rotation (ang).translated (c);
+        // body shadow, body, highlight
+        g.setColour (Colours::black.withAlpha (0.6f)); g.fillPath (p, tr.translated (2.0f, 4.0f));
+        ColourGradient body (Colour (0xff4a4a4e), c.x - r * 0.4f, c.y - r * 0.6f, Colour (0xff070708), c.x + r * 0.5f, c.y + r * 0.7f, false);
+        g.setGradientFill (body); g.fillPath (p, tr);
+        g.setColour (Colours::white.withAlpha (0.25f)); g.strokePath (p, PathStrokeType (1.2f), tr);
+        // white index line
+        g.setColour (Colour (0xfff2efe8));
+        g.drawLine ({ c.getPointOnCircumference (hub * 0.15f, ang), c.getPointOnCircumference (tip - w * 0.35f, ang) }, 3.0f);
+        // specular dot
+        g.setColour (Colours::white.withAlpha (0.18f));
+        g.fillEllipse (Rectangle<float> (hub * 0.9f, hub * 0.55f).withCentre (c + Point<float> (-hub * 0.3f, -hub * 0.45f)));
+    }
 }
 
 int OmniEditor::keyAt (Point<float> p) const
@@ -294,6 +399,12 @@ void OmniEditor::mouseDown (const MouseEvent& e)
     grabKeyboardFocus();
     const auto pp = toPhoto (e.position);
     if (e.mods.isPopupMenu() && (ledBox.contains (pp) || dragBox.contains (pp))) { showTakeMenu(); return; }
+    if (const int kn = knobAt (pp); kn >= 0)
+    {
+        knobDrag = kn; knobStartVal = knobValue (kn); knobStartY = e.position.y;
+        if (e.getNumberOfClicks() > 1) setKnob (kn, 0.0f);
+        return;
+    }
     if (modeDragBox.contains (pp) || modeRecBox.contains (pp))
     {
         const bool sync = modeRecBox.contains (pp);
@@ -323,6 +434,13 @@ void OmniEditor::mouseDown (const MouseEvent& e)
 void OmniEditor::mouseDrag (const MouseEvent& e)
 {
     const auto pp = toPhoto (e.position);
+    if (knobDrag >= 0)
+    {
+        // drag up / down (or sideways) to turn
+        const float d = (knobStartY - e.position.y + (e.position.x - e.mouseDownPosition.x) * 0.5f) / (180.0f * scale());
+        setKnob (knobDrag, knobStartVal + d);
+        return;
+    }
     if (ledDrag)
     {
         if (dragging || e.getDistanceFromDragStart() < 6) return;
@@ -357,13 +475,14 @@ void OmniEditor::mouseDrag (const MouseEvent& e)
     }
 }
 
-void OmniEditor::mouseUp (const MouseEvent&) { ledDrag = false; dragging = false; releaseKey(); }
+void OmniEditor::mouseUp (const MouseEvent&) { knobDrag = -1; ledDrag = false; dragging = false; releaseKey(); }
 
 void OmniEditor::mouseMove (const MouseEvent& e)
 {
     const auto pp = toPhoto (e.position);
     const bool overLed = ledBox.contains (pp) || dragBox.contains (pp);
-    setMouseCursor (overLed && ! take.isEmpty() ? MouseCursor::DraggingHandCursor : MouseCursor::NormalCursor);
+    setMouseCursor (knobAt (pp) >= 0 ? MouseCursor::UpDownResizeCursor
+                    : overLed && ! take.isEmpty() ? MouseCursor::DraggingHandCursor : MouseCursor::NormalCursor);
     // hovering a key tells you what it does (and which computer key plays it)
     const int i = keyAt (pp);
     if (i != hoverKey)
@@ -534,8 +653,8 @@ void OmniEditor::timerCallback()
     for (auto gl : stringGlow) h = h * 7 + (int64) (gl * 20.0f);
     const bool msg = Time::getMillisecondCounterHiRes() < ledUntil;
     h = h * 131 + (msg ? led1.hashCode64() * 3 + led2.hashCode64() : proc.dispRoot.load() * 17 + proc.dispType.load());
-    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0) + (proc.hostPlaying.load() ? 7 : 0) + (take.isSync() ? 13 : 0) + proc.recMode.load() * 31;
-    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 370.0f, 680.0f, 520.0f, 360.0f })); }
+    h = h * 3 + (int64) (std::fmod (Time::getMillisecondCounterHiRes() / 1000.0, 5.0) < 2.5) + take.countNotes() * 2 + (take.isFinished() ? 1 : 0) + (proc.hostPlaying.load() ? 7 : 0) + (take.isSync() ? 13 : 0) + proc.recMode.load() * 31 + proc.currentPreset.load() * 101 + (int64) (proc.cosmosAmount.load() * 1000.0f) * 7;
+    if (h != lastPaintHash) { lastPaintHash = h; repaint (toScreen ({ 370.0f, 560.0f, 520.0f, 480.0f })); }
 }
 
 void OmniEditor::paint (Graphics& g)
@@ -640,6 +759,10 @@ void OmniEditor::paint (Graphics& g)
                 g.setColour (Colour (0xffff2a1a).withAlpha (0.35f * gl));
                 g.fillRect (x - 7.0f, k.r.getY() - 4.0f, 14.0f, k.r.getHeight() + 8.0f);
             }
+
+    // ---------------------------------------------------------------- knobs
+    drawKnob (g, knobPos[0], knobR, knobValue (0), OmniProcessor::numPresets, "SOUND", { "1", "8" });
+    drawKnob (g, knobPos[1], knobR, knobValue (1), 0, "COSMOS", { "OFF", "MAX" });
 
     // ---------------------------------------------------------------- LED read-out
     {

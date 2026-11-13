@@ -56,6 +56,9 @@ public:
     /** COSMOS key: 0 off, 1 drift, 2 full cosmos. */
     void setCosmos (int level);
     std::atomic<int> cosmosLevel { 0 };
+    /** COSMOS knob: 0..1, every cosmic effect at once (shimmer, orbit, mutant, warp, space). */
+    void setCosmosAmount (float k);
+    std::atomic<float> cosmosAmount { 0.0f };
 
     /** On-screen keys, chord buttons and strings write here (message thread); drained in processBlock. */
     juce::MidiKeyboardState keyboardState;
