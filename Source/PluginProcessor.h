@@ -25,7 +25,7 @@ public:
 
     const juce::String getName() const override        { return JucePlugin_Name; }
     bool acceptsMidi() const override                  { return true; }
-    bool producesMidi() const override                 { return true; }
+    bool producesMidi() const override                 { return false; }
     bool isMidiEffect() const override                 { return false; }
     bool supportsMPE() const override                  { return true; }
     double getTailLengthSeconds() const override       { return 12.0; }

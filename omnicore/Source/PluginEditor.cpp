@@ -290,10 +290,10 @@ void OmniEditor::mouseDown (const MouseEvent& e)
     if (e.mods.isPopupMenu() && (ledBox.contains (pp) || dragBox.contains (pp))) { showTakeMenu(); return; }
     if (modeDragBox.contains (pp) || modeRecBox.contains (pp))
     {
-        const int m = modeRecBox.contains (pp) ? 1 : 0;
-        proc.recMode.store (m);
-        proc.apvts.state.setProperty ("recMode", m, nullptr);
-        showLed (m == 1 ? "REC > PIANO ROLL" : "DRAG MIDI", m == 1 ? "PRESS REC IN FL AND PLAY" : "PLAY, THEN DRAG THE WINDOW");
+        const bool sync = modeRecBox.contains (pp);
+        take.setSync (sync);
+        proc.apvts.state.setProperty ("takeSync", sync, nullptr);
+        showLed (sync ? "SYNC WITH FL" : "FREE TAKE", sync ? "REC IN FL, PLAY, STOP, DRAG" : "PLAY, THEN DRAG");
         repaint();
         return;
     }
@@ -677,8 +677,6 @@ void OmniEditor::paint (Graphics& g)
             t = proc.hostPlaying.load() ? "REC  " + String (n) + " NOTES" : (n > 0 ? "DRAG MIDI > BAR 1  " + String (n) : "SYNC: PRESS REC IN FL");
         else
             t = n > 0 && ! take.isFinished() ? "DRAG MIDI >  " + String (n) + " NOTES" : (n > 0 ? "DROPPED - PLAY = NEW TAKE" : "PLAY, THEN DRAG MIDI");
-        if (proc.recMode.load() == 1)
-            t = proc.hostPlaying.load() ? "REC > PIANO ROLL  (LIVE)" : "REC > PIANO ROLL: PRESS REC IN FL";
         draw (t, dragBox, mid, Justification::centred);
 
         // capture-mode LED buttons
@@ -699,7 +697,7 @@ void OmniEditor::paint (Graphics& g)
             g.setFont (FontOptions (Font::getDefaultMonospacedFontName(), 12.0f, Font::bold));
             g.drawText (label, r, Justification::centred, false);
         };
-        led (modeDragBox, "DRAG", proc.recMode.load() == 0);
-        led (modeRecBox, "REC", proc.recMode.load() == 1);
+        led (modeDragBox, "FREE", ! take.isSync());
+        led (modeRecBox, "SYNC", take.isSync());
     }
 }

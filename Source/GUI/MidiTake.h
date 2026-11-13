@@ -199,8 +199,8 @@ private:
     bool dragging = false;
 };
 
-/** "REC > PIANO ROLL" pill: when on, mouse playing goes out as MIDI notes, so FL's Record
-    (through a loopback MIDI port) writes them straight into the piano roll. */
+/** "SYNC WITH FL REC" pill: the take follows FL's Record/Play (count-in, bars), so after Stop the
+    DRAG MIDI pill drops the notes exactly where they were played. */
 class RecModeButton : public juce::Component
 {
 public:
@@ -222,7 +222,7 @@ public:
         g.setColour (juce::Colour (on ? 0xffffffff : 0xffe6dccb));
         g.setFont (juce::FontOptions (r.getHeight() * 0.40f, juce::Font::bold));
         const bool live = on && hostPlaying && hostPlaying();
-        g.drawText (on ? (live ? "REC > PIANO ROLL  (LIVE)" : "REC > PIANO ROLL  ON") : "REC > PIANO ROLL  OFF",
+        g.drawText (on ? (live ? "SYNC REC  (LIVE)" : "SYNC WITH FL REC  ON") : "SYNC WITH FL REC  OFF",
                     getLocalBounds(), juce::Justification::centred);
     }
     void mouseEnter (const juce::MouseEvent&) override { setMouseCursor (juce::MouseCursor::PointingHandCursor); }

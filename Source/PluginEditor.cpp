@@ -46,10 +46,10 @@ AetherVoxEditor::AetherVoxEditor (AetherVoxProcessor& p)
     body.addAndMakeVisible (dragMidi);
 
     recMode.setBounds (386, designHeight - 84, 330, 52);
-    recMode.isOn        = [this] { return proc.recMode.load() == 1; };
+    recMode.isOn        = [this] { return view.getTake().isSync(); };
     recMode.hostPlaying = [this] { return proc.hostPlaying.load(); };
-    recMode.setOn       = [this] (bool on) { proc.recMode.store (on ? 1 : 0); proc.apvts.state.setProperty ("recMode", on ? 1 : 0, nullptr); };
-    proc.recMode.store ((int) proc.apvts.state.getProperty ("recMode", 0));
+    recMode.setOn       = [this] (bool on) { view.getTake().setSync (on); proc.apvts.state.setProperty ("takeSync", on, nullptr); };
+    proc.recMode.store (0);
     body.addAndMakeVisible (recMode);
 
     // default size: about half the screen width (fits inside the DAW), resizable from the corner
