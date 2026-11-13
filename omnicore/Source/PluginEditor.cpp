@@ -267,8 +267,12 @@ void OmniEditor::pressKey (int idx, Point<float> pp)
         }
         case KeyKind::StrumHigh:
         case KeyKind::Strum:
+            // just press it: the pyramid strums by itself in time while you hold it
             lastString = -1; lastStrumTime = Time::getMillisecondCounterHiRes(); lastStrumX = pp.x;
-            strumAt (k, pp.x, 0.0f); break;
+            proc.keyboardState.noteOn (OmniProcessor::stringChannel, k.kind == KeyKind::StrumHigh ? 111 : 110, 0.85f);
+            for (auto& gl : stringGlow) gl = 1.0f;
+            showLed ("STRUM", "HOLD = KEEPS STRUMMING");
+            break;
         default: break;
     }
     repaint();
@@ -279,6 +283,8 @@ void OmniEditor::releaseKey()
     if (downKey < 0) return;
     auto& k = keys[(size_t) downKey];
     if (k.kind == KeyKind::Chord) proc.keyboardState.noteOff (OmniProcessor::chordChannel, k.a * 12 + k.b, 0.0f);
+    if (k.kind == KeyKind::Strum || k.kind == KeyKind::StrumHigh)
+        proc.keyboardState.noteOff (OmniProcessor::stringChannel, k.kind == KeyKind::StrumHigh ? 111 : 110, 0.0f);
     downKey = -1; lastString = -1;
     repaint();
 }
@@ -381,8 +387,8 @@ bool OmniEditor::keyPressed (const KeyPress& kp)
     const int code = kp.getKeyCode();
     if (code == KeyPress::spaceKey)
     {
-        proc.keyboardState.noteOn (OmniProcessor::stringChannel, kp.getModifiers().isShiftDown() ? 101 : 100, 0.85f);
-        proc.keyboardState.noteOff (OmniProcessor::stringChannel, kp.getModifiers().isShiftDown() ? 101 : 100, 0.0f);
+        // space held = the strum bar held: it strums by itself in time
+        if (! kbHeld.count (code)) { kbHeld[code] = -2; proc.keyboardState.noteOn (OmniProcessor::stringChannel, 110, 0.85f); }
         for (auto& gl : stringGlow) gl = 1.0f;
         return true;
     }
@@ -431,6 +437,7 @@ void OmniEditor::releaseKeyboardChords (bool all)
     {
         if (all || ! KeyPress::isKeyCurrentlyDown (it->first))
         {
+            if (it->second == -2) proc.keyboardState.noteOff (OmniProcessor::stringChannel, 110, 0.0f);
             if (it->second >= 0)
             {
                 const auto& k = keys[(size_t) it->second];
@@ -509,6 +516,9 @@ void OmniEditor::timerCallback()
     pulse += (jlimit (0.0f, 1.0f, proc.dispPeak.load() * 3.0f) - pulse) * 0.25f;
     flash *= 0.9f;
     for (auto& gl : stringGlow) gl *= 0.86f;
+    if ((downKey >= 0 && (keys[(size_t) downKey].kind == KeyKind::Strum || keys[(size_t) downKey].kind == KeyKind::StrumHigh))
+        || kbHeld.count (KeyPress::spaceKey))
+        for (auto& gl : stringGlow) gl = jmax (gl, 0.5f + 0.5f * pulse);
 
     if (! kbHeld.empty()) releaseKeyboardChords (false);   // key-up can be swallowed by the host
     for (size_t i = 0; i < keys.size(); ++i) litCache[i] = isLit (keys[i]);

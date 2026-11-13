@@ -109,7 +109,8 @@ void OmniProcessor::handle (const MidiMessage& m)
         }
         else if (ch == stringChannel)
         {
-            if (on && note >= 100) chords.strumSweep (synth, note == 100, jmax (0.5f, vel));
+            if (note == 110 || note == 111) chords.setAutoStrum (on, note == 111);   // strum bar held: auto strum
+            else if (on && note >= 100) chords.strumSweep (synth, note == 100, jmax (0.5f, vel));
             else if (on) chords.strum (synth, note, vel);
         }
         else chords.key (synth, note, vel, on);

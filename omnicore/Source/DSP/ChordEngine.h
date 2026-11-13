@@ -179,6 +179,13 @@ public:
         }
     }
 
+    /** Hold the strum bar: it strums by itself in time (eighth notes, down-up), following the chord. */
+    void setAutoStrum (bool on, bool high)
+    {
+        if (on && ! autoStrum) { strumToStep = 0.0; strumDir = true; }
+        autoStrum = on; autoHigh = high;
+    }
+
     /** Strings follow the held chord, or the last chord played (C major before the first one). */
     int stringNoteOrLast (int k)
     {
@@ -231,12 +238,14 @@ public:
             // next arp step
             const bool arpOn = (set.mode == PlayMode::Arp || stabs) && chordRoot >= 0;
             if (arpOn) seg = std::min (seg, std::max (0, (int) std::ceil (samplesToStep)));
+            if (autoStrum) seg = std::min (seg, std::max (0, (int) std::ceil (strumToStep)));
 
             if (seg > 0)
             {
                 s.render (L + done, R + done, seg);
                 done += seg; clock += seg;
                 if (arpOn) samplesToStep -= seg;
+                if (autoStrum) strumToStep -= seg;
             }
             // fire due events
             for (size_t i = 0; i < pending.size();)
@@ -248,6 +257,21 @@ public:
                     if (e.on) s.noteOn (e.note, e.vel); else s.noteOff (e.note);
                 }
                 else ++i;
+            }
+            if (autoStrum && strumToStep <= 0.0)
+            {
+                // one swipe across the strings (upper half for the high bar), alternating down / up
+                const int first = autoHigh ? numStrings / 2 : 0, cnt = numStrings - first;
+                for (int k = 0; k < cnt; ++k)
+                {
+                    const int str = strumDir ? first + k : numStrings - 1 - k;
+                    const int note = stringNoteOrLast (str);
+                    const int64_t t = clock + (int64_t) (k * 0.018 * fs);
+                    schedule (t, note, true, (strumDir ? 0.85f : 0.65f) * (0.8f + 0.2f * (float) k / cnt));
+                    schedule (t + (int64_t) (set.pluck * fs * 1.2), note, false, 0.0f);
+                }
+                strumDir = ! strumDir;
+                strumToStep += spb * 0.5;
             }
             if (arpOn && samplesToStep <= 0.0)
             {
@@ -276,7 +300,8 @@ private:
     int chordRoot = -1, chordType = 0, buttonsDown = 0, lastStrumString = -1;
     int arpIdx = 0, arpDir = 1; double samplesToStep = 0.0; uint32_t rnd = 12345;
     int lastRoot = 0, lastType = 0, arpBassNote = -1; int64_t lastArpClock = -1;
-    bool stabbing = false;
+    bool stabbing = false, autoStrum = false, autoHigh = false, strumDir = true;
+    double strumToStep = 0.0;
 
     void updateArpBass (OmniSynth& s, float vel)
     {
