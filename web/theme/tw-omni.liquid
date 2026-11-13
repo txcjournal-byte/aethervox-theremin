@@ -40,7 +40,7 @@
   html body .omx .om-map .step p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:var(--mute)!important;font-size:18px!important;line-height:1.55!important;max-width:38ch}
   html body .omx .om-map .step kbd:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:inline-block;padding:1px 8px;border-radius:5px;background:rgba(255,42,26,.16);color:#ffb59c!important;font-family:inherit!important;font-size:16px!important}
   .om-map .vis{position:relative;height:100%;overflow:hidden}
-  .om-map .pic{position:absolute;width:min(132vh,62vw);aspect-ratio:1;left:50%;top:50%;transform:translate(-50%,-50%) translate(var(--px,0%),var(--py,0%)) scale(var(--ps,1));transition:transform .9s cubic-bezier(.2,.7,.1,1)}
+  .om-map .pic{position:absolute;width:min(92vh,52vw);aspect-ratio:1;left:50%;top:50%;transform:translate(-50%,-50%) translate(var(--px,0%),var(--py,0%)) scale(var(--ps,1));transition:transform .9s cubic-bezier(.2,.7,.1,1)}
   .om-map .pic img{width:100%;height:100%;display:block}
   .om-map .hot{position:absolute;border-radius:6px;box-shadow:0 0 0 2px var(--red),0 0 28px 4px rgba(255,42,26,.65);opacity:0;transition:opacity .5s ease;pointer-events:none}
   .om-map .hot.on{opacity:1}
@@ -249,7 +249,7 @@
 
   var hero=root.querySelector('.om-hero'), himg=hero.querySelector('.ph img'), burn=hero.querySelector('.burn');
   var map=root.querySelector('.om-map'), steps=[].slice.call(map.querySelectorAll('.step')), hots=[].slice.call(map.querySelectorAll('.hot')), pic=map.querySelector('.pic');
-  var focus=[[0,-14,1.55],[0,-24,1.7],[0,-14,1.6],[0,8,1.7],[0,-6,1.6]];
+  var focus=[.64,.73,.69,.36,.56], fs=1.35;
   var cos=root.querySelector('.om-cos'), rows=[].slice.call(cos.querySelectorAll('.row')), words=[].slice.call(cos.querySelectorAll('.row span')), say=cos.querySelector('.sx');
   var lines={Shimmer:'Shimmer sends the reverb up an octave, so every chord leaves a halo.',Warp:'Warp ring-modulates the voice into something metallic and off-world.',Orbit:'Orbit spins the sound around your head with a six-stage phaser.',Mutant:'Mutant moves the filter and pitch at random, in time, on its own.',Tape:'Tape chorus wobbles like an old cassette deck.',Crush:'The crusher drops bits and sample rate for 8-bit grit.',Echo:'Analog delay bounces left and right, darker on every repeat.',Space:'Space reverb is a huge hall that never quite ends.'};
   var buy=root.querySelector('.om-buy'), lastStep=-1, lastWord='';
@@ -263,7 +263,7 @@
     hero.style.setProperty('--t2',ease(seg(a,.62,.8)).toFixed(3));
 
     var m=prog(map), q=m.p, si=Math.min(4,Math.floor(seg(q,.02,.98)*5));
-    if(si!==lastStep){lastStep=si;steps.forEach(function(s,i){s.classList.toggle('on',i===si)});hots.forEach(function(x){x.classList.toggle('on',+x.dataset.s===si)});var f=focus[si];pic.style.setProperty('--px',f[0]+'%');pic.style.setProperty('--py',f[1]*-1+'%');pic.style.setProperty('--ps',f[2])}
+    if(si!==lastStep){lastStep=si;steps.forEach(function(s,i){s.classList.toggle('on',i===si)});hots.forEach(function(x){x.classList.toggle('on',+x.dataset.s===si)});pic.style.setProperty('--py',(-(focus[si]-.5)*fs*100).toFixed(1)+'%');pic.style.setProperty('--ps',fs)}
 
     var c=prog(cos), cp=ease(seg(c.p,.04,.96));
     rows.forEach(function(r){var max=r.scrollWidth-innerWidth, dir=+r.dataset.d; r.style.setProperty('--tx',(dir<0?-cp*max:-(1-cp)*max).toFixed(1)+'px')});
