@@ -222,7 +222,7 @@ public:
         g.setColour (juce::Colour (on ? 0xffffffff : 0xffe6dccb));
         g.setFont (juce::FontOptions (r.getHeight() * 0.40f, juce::Font::bold));
         const bool live = on && hostPlaying && hostPlaying();
-        g.drawText (on ? (live ? "SYNC REC  (LIVE)" : "SYNC WITH FL REC  ON") : "SYNC WITH FL REC  OFF",
+        g.drawText (on ? (live ? "SYNC REC  (LIVE)" : "SYNC WITH REC  ON") : "SYNC WITH REC  OFF",
                     getLocalBounds(), juce::Justification::centred);
     }
     void mouseEnter (const juce::MouseEvent&) override { setMouseCursor (juce::MouseCursor::PointingHandCursor); }

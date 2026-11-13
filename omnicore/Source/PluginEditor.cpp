@@ -204,8 +204,10 @@ void OmniEditor::drawKnob (Graphics& g, Point<float> c, float r, float v, int st
     auto engraved = [&] (const String& t, Rectangle<float> rr, float h)
     {
         g.setFont (FontOptions (Font::getDefaultSansSerifFontName(), h, Font::bold));
-        g.setColour (Colours::white.withAlpha (0.38f)); g.drawText (t, rr.translated (0.0f, 1.3f), Justification::centred, false);
-        g.setColour (Colour (0xff0d0b0a).withAlpha (0.85f)); g.drawText (t, rr, Justification::centred, false);
+        g.setColour (Colours::black.withAlpha (0.8f)); g.drawText (t, rr.translated (1.0f, 1.5f), Justification::centred, false);
+        g.setColour (Colour (0xffff2a10).withAlpha (0.12f));
+        for (int dx = -2; dx <= 2; ++dx) for (int dy = -2; dy <= 2; ++dy) g.drawText (t, rr.translated ((float) dx, (float) dy), Justification::centred, false);
+        g.setColour (Colour (0xffff8a6c)); g.drawText (t, rr, Justification::centred, false);
     };
     // scale: ticks cut into the stone, the active range glowing red
     const int n = steps > 1 ? steps : 11;
@@ -220,10 +222,20 @@ void OmniEditor::drawKnob (Graphics& g, Point<float> c, float r, float v, int st
     }
     if (marks.size() == 2)
     {
-        engraved (marks[0], Rectangle<float> (60.0f, 16.0f).withCentre (c.getPointOnCircumference (r + 22.0f, a0) + Point<float> (-14.0f, 10.0f)), 11.0f);
-        engraved (marks[1], Rectangle<float> (60.0f, 16.0f).withCentre (c.getPointOnCircumference (r + 22.0f, a1) + Point<float> (14.0f, 10.0f)), 11.0f);
+        engraved (marks[0], Rectangle<float> (60.0f, 16.0f).withCentre (c.getPointOnCircumference (r + 22.0f, a0) + Point<float> (-14.0f, 10.0f)), 13.0f);
+        engraved (marks[1], Rectangle<float> (60.0f, 16.0f).withCentre (c.getPointOnCircumference (r + 22.0f, a1) + Point<float> (14.0f, 10.0f)), 13.0f);
     }
-    engraved (label, Rectangle<float> (140.0f, 20.0f).withCentre (c - Point<float> (0.0f, r + 27.0f)), 15.0f);
+    {
+        // lit label: carved into the stone, filled with the same red glow as the eye
+        const auto rr = Rectangle<float> (170.0f, 26.0f).withCentre (c - Point<float> (0.0f, r + 31.0f));
+        g.setFont (FontOptions (Font::getDefaultSansSerifFontName(), 21.0f, Font::bold).withKerningFactor (0.12f));
+        g.setColour (Colours::black.withAlpha (0.75f)); g.drawText (label, rr.translated (1.5f, 2.0f), Justification::centred, false);
+        g.setColour (Colour (0xffff2a10).withAlpha (0.10f));
+        for (int dx = -3; dx <= 3; ++dx) for (int dy = -3; dy <= 3; ++dy)
+            if (dx * dx + dy * dy <= 9) g.drawText (label, rr.translated ((float) dx, (float) dy), Justification::centred, false);
+        g.setColour (Colour (0xffff4a2c)); g.drawText (label, rr, Justification::centred, false);
+        g.setColour (Colour (0xffffc0a8).withAlpha (0.55f)); g.drawText (label, rr.translated (0.0f, -0.6f), Justification::centred, false);
+    }
 
     // drop shadow on the stone
     g.setColour (Colours::black.withAlpha (0.55f));
@@ -741,9 +753,9 @@ void OmniEditor::paint (Graphics& g)
                                                on ? Colour (0xffff8a00) : Colour (0xffa8140f), face.getX(), face.getBottom(), false));
             g.fillRoundedRectangle (face, 4.0f);
             g.setColour (on ? Colour (0xff2a0800) : Colour (0xfff6eee8));
-            const float fh = k.kind == KeyKind::Chord ? 15.0f : 11.0f;
+            const float fh = k.kind == KeyKind::Chord ? 16.0f : 13.5f;
             g.setFont (FontOptions (Font::getDefaultSansSerifFontName(), fh, Font::bold));
-            g.drawFittedText (t, face.toNearestInt(), Justification::centred, 1, 0.55f);
+            g.drawFittedText (t, face.toNearestInt(), Justification::centred, 1, 0.62f);
         }
     }
     // strum bars: strings light up as you swipe
